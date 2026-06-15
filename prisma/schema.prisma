@@ -1,0 +1,470 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String?
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id])
+  prospects    Prospect[] @relation("AssignedProspects")
+  tasks        Task[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  archivedAt   DateTime?
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  users       User[]
+  permissions Permission[]
+}
+
+model Permission {
+  id     String @id @default(cuid())
+  key    String
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@unique([key, roleId])
+}
+
+model LeadSource {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  prospects Prospect[]
+  createdAt DateTime   @default(now())
+}
+
+model Prospect {
+  id             String          @id @default(cuid())
+  civility       String?
+  firstName      String
+  lastName       String
+  phone          String
+  secondaryPhone String?
+  email          String?
+  status         String
+  priority       String          @default("Normale")
+  score          Int             @default(0)
+  estimatedBudget Decimal        @default(0)
+  expectedDecisionDate DateTime?
+  nextAction     String?
+  nextFollowUp   DateTime?
+  comments       String?
+  sourceId       String?
+  source         LeadSource?     @relation(fields: [sourceId], references: [id])
+  assignedToId   String?
+  assignedTo     User?           @relation("AssignedProspects", fields: [assignedToId], references: [id])
+  addresses      Address[]
+  property       Property?
+  projects       Project[]
+  opportunities  Opportunity[]
+  appointments   Appointment[]
+  tasks          Task[]
+  notes          Note[]
+  documents      Document[]
+  emailThreads   EmailThread[]
+  client         Client?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  archivedAt     DateTime?
+  lastModifiedBy String?
+
+  @@index([phone])
+  @@index([email])
+  @@index([lastName])
+}
+
+model Client {
+  id        String     @id @default(cuid())
+  number    String     @unique
+  prospectId String?   @unique
+  prospect  Prospect?  @relation(fields: [prospectId], references: [id])
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  addresses Address[]
+  projects  Project[]
+  worksites Worksite[]
+  invoices  Invoice[]
+  payments  Payment[]
+  documents Document[]
+  savRequests SavRequest[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  archivedAt DateTime?
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  label     String
+  line1     String
+  line2     String?
+  postalCode String
+  city      String
+  department String?
+  prospectId String?
+  clientId  String?
+  prospect  Prospect? @relation(fields: [prospectId], references: [id])
+  client    Client?   @relation(fields: [clientId], references: [id])
+}
+
+model Property {
+  id              String   @id @default(cuid())
+  prospectId      String   @unique
+  prospect        Prospect @relation(fields: [prospectId], references: [id])
+  housingType     String?
+  constructionYear Int?
+  livingArea      Int?
+  levels          Int?
+  occupants       Int?
+  ownerStatus     String?
+  heatingSystem   String?
+  currentEnergy   String?
+  emitters        String?
+  hotWater        String?
+  insulation      String?
+  dpe             String?
+  fiscalIncome    Decimal?
+  householdSize   Int?
+  maprimeCategory String?
+  estimatedCee    Decimal?
+  estimatedGrants Decimal?
+}
+
+model Project {
+  id         String   @id @default(cuid())
+  type       String
+  description String?
+  prospectId String?
+  clientId   String?
+  prospect   Prospect? @relation(fields: [prospectId], references: [id])
+  client     Client?   @relation(fields: [clientId], references: [id])
+  quotes     Quote[]
+  worksites  Worksite[]
+}
+
+model Opportunity {
+  id          String   @id @default(cuid())
+  prospectId  String
+  prospect    Prospect @relation(fields: [prospectId], references: [id])
+  stageId     String
+  stage       PipelineStage @relation(fields: [stageId], references: [id])
+  amount      Decimal
+  probability Int
+  lostReason  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PipelineStage {
+  id            String        @id @default(cuid())
+  name          String
+  position      Int
+  probability   Int
+  opportunities Opportunity[]
+}
+
+model Appointment {
+  id         String   @id @default(cuid())
+  title      String
+  template   String?
+  startsAt   DateTime
+  endsAt     DateTime?
+  address    String?
+  googleEventId String?
+  prospectId String?
+  prospect   Prospect? @relation(fields: [prospectId], references: [id])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  type        String
+  title       String
+  description String?
+  dueAt       DateTime
+  priority    String
+  status      String
+  completedAt DateTime?
+  ownerId     String?
+  owner       User?     @relation(fields: [ownerId], references: [id])
+  prospectId  String?
+  prospect    Prospect? @relation(fields: [prospectId], references: [id])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  body      String
+  prospectId String?
+  prospect  Prospect? @relation(fields: [prospectId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model EmailThread {
+  id         String   @id @default(cuid())
+  subject    String
+  gmailThreadId String?
+  prospectId String?
+  prospect   Prospect? @relation(fields: [prospectId], references: [id])
+  messages   EmailMessage[]
+}
+
+model EmailMessage {
+  id        String   @id @default(cuid())
+  threadId  String
+  thread    EmailThread @relation(fields: [threadId], references: [id])
+  from      String
+  to        String
+  sentAt    DateTime
+  body      String
+  status    String
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  body      String
+  automatic Boolean  @default(false)
+  active    Boolean  @default(true)
+}
+
+model Automation {
+  id          String @id @default(cuid())
+  name        String
+  trigger     String
+  action      String
+  active      Boolean @default(false)
+  executions  AutomationExecution[]
+}
+
+model AutomationExecution {
+  id           String @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id])
+  status       String
+  executedAt   DateTime @default(now())
+  details      Json?
+}
+
+model Quote {
+  id          String @id @default(cuid())
+  reference   String @unique
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  versions    QuoteVersion[]
+  status      String
+}
+
+model QuoteVersion {
+  id          String @id @default(cuid())
+  quoteId     String
+  quote       Quote @relation(fields: [quoteId], references: [id])
+  version     Int
+  amountHt    Decimal
+  vat         Decimal
+  amountTtc   Decimal
+  grantAmount Decimal @default(0)
+  ceeAmount   Decimal @default(0)
+  remainder   Decimal @default(0)
+  margin      Decimal?
+  documentId  String?
+}
+
+model GrantApplication {
+  id        String @id @default(cuid())
+  type      String
+  status    String
+  amount    Decimal
+}
+
+model Worksite {
+  id          String @id @default(cuid())
+  reference   String @unique
+  clientId    String
+  client      Client @relation(fields: [clientId], references: [id])
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  amount      Decimal
+  deposit     Decimal @default(0)
+  balance     Decimal @default(0)
+  status      String
+  plannedStart DateTime?
+  plannedEnd   DateTime?
+  phases      WorksitePhase[]
+  reports     WorksiteReport[]
+  photos      WorksitePhoto[]
+  reservations Reservation[]
+}
+
+model WorksitePhase {
+  id          String @id @default(cuid())
+  worksiteId  String
+  worksite    Worksite @relation(fields: [worksiteId], references: [id])
+  name        String
+  startsAt    DateTime?
+  endsAt      DateTime?
+  progress    Int @default(0)
+  comments    String?
+}
+
+model WorksiteReport {
+  id          String @id @default(cuid())
+  worksiteId  String
+  worksite    Worksite @relation(fields: [worksiteId], references: [id])
+  reportDate  DateTime
+  body        String
+  clientSignature String?
+}
+
+model WorksitePhoto {
+  id          String @id @default(cuid())
+  worksiteId  String
+  worksite    Worksite @relation(fields: [worksiteId], references: [id])
+  url         String
+  caption     String?
+  stage       String?
+}
+
+model Reservation {
+  id         String @id @default(cuid())
+  worksiteId String
+  worksite   Worksite @relation(fields: [worksiteId], references: [id])
+  body       String
+  status     String
+}
+
+model Invoice {
+  id       String @id @default(cuid())
+  number   String @unique
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+  amount   Decimal
+  status   String
+}
+
+model Payment {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+  amount   Decimal
+  paidAt   DateTime?
+  method   String?
+}
+
+model Supplier {
+  id        String @id @default(cuid())
+  name      String
+  contacts  String?
+  orders    PurchaseOrder[]
+}
+
+model Subcontractor {
+  id        String @id @default(cuid())
+  company   String
+  trade     String
+  insuranceExpiresAt DateTime?
+}
+
+model Technician {
+  id    String @id @default(cuid())
+  name  String
+  phone String?
+}
+
+model Equipment {
+  id          String @id @default(cuid())
+  reference   String
+  brand       String?
+  warranties  EquipmentWarranty[]
+}
+
+model EquipmentWarranty {
+  id          String @id @default(cuid())
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  expiresAt   DateTime
+}
+
+model PurchaseOrder {
+  id          String @id @default(cuid())
+  reference   String
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  amount      Decimal
+  status      String
+}
+
+model Document {
+  id         String @id @default(cuid())
+  name       String
+  path       String
+  mimeType   String
+  prospectId String?
+  clientId   String?
+  prospect   Prospect? @relation(fields: [prospectId], references: [id])
+  client     Client? @relation(fields: [clientId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        String @id @default(cuid())
+  title     String
+  body      String
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String @id @default(cuid())
+  actorId   String?
+  actor     User? @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Connector {
+  id        String @id @default(cuid())
+  name      String
+  type      String
+  status    String
+  config    Json
+  histories ImportHistory[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ImportHistory {
+  id          String @id @default(cuid())
+  connectorId String
+  connector   Connector @relation(fields: [connectorId], references: [id])
+  status      String
+  imported    Int @default(0)
+  duplicates  Int @default(0)
+  errors      Json?
+  createdAt   DateTime @default(now())
+}
+
+model SavRequest {
+  id        String @id @default(cuid())
+  clientId  String
+  client    Client @relation(fields: [clientId], references: [id])
+  title     String
+  status    String
+  priority  String
+  createdAt DateTime @default(now())
+}
