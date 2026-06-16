@@ -1,5 +1,3 @@
-import { findPotentialDuplicate } from "./crm";
-
 const DEFAULT_SPREADSHEET_ID = "1dFXhXlD3g7NU8H7HjJJ2V3B4n3GrhUFfWoUpYeVWNzA";
 const DEFAULT_GID = "1926972254";
 
@@ -36,10 +34,10 @@ export async function fetchLatestSheetLeads(limit = 25) {
   const csv = await response.text();
   const rows = parseCsv(csv);
   const [headers = [], ...dataRows] = rows;
-  const mappedRows = dataRows
+  const mappedRows = markDuplicates(dataRows
     .map((row, index) => mapLead(headers, row, index + 2))
     .filter((lead) => lead.lastName || lead.firstName || lead.phone || lead.email)
-    .filter((lead) => !lead.lastName.toLowerCase().includes("nouvelle commnade"))
+    .filter((lead) => !lead.lastName.toLowerCase().includes("nouvelle commnade")))
     .sort((a, b) => Date.parse(b.entryDate || "1970-01-01") - Date.parse(a.entryDate || "1970-01-01"));
 
   return {
@@ -47,6 +45,11 @@ export async function fetchLatestSheetLeads(limit = 25) {
     totalRows: mappedRows.length,
     latest: mappedRows.slice(0, limit)
   };
+}
+
+export async function fetchAllSheetLeads() {
+  const result = await fetchLatestSheetLeads(Number.MAX_SAFE_INTEGER);
+  return result.latest;
 }
 
 function mapLead(headers: string[], row: string[], rowNumber: number): ImportedLead {
@@ -59,14 +62,6 @@ function mapLead(headers: string[], row: string[], rowNumber: number): ImportedL
   const email = record.email || "";
   const project = record.dateappel || "Pompe a chaleur";
   const comment = record.commentaire || "";
-  const duplicate = findPotentialDuplicate({
-    phone,
-    email,
-    lastName,
-    postalCode,
-    worksiteAddress: ""
-  });
-
   return {
     rowNumber,
     firstName,
@@ -80,9 +75,30 @@ function mapLead(headers: string[], row: string[], rowNumber: number): ImportedL
     heating: record.chauffage || "",
     project,
     comment,
-    source: "Google Sheets",
-    duplicateId: duplicate?.id
+    source: "Google Sheets"
   };
+}
+
+function markDuplicates(leads: ImportedLead[]) {
+  const seen = new Map<string, ImportedLead>();
+
+  return leads.map((lead) => {
+    const keys = [
+      normalizeIdentity(lead.phone),
+      normalizeIdentity(lead.email),
+      `${normalizeIdentity(lead.lastName)}-${normalizeIdentity(lead.postalCode)}`
+    ].filter((key) => key && key !== "-");
+
+    const firstDuplicate = keys.map((key) => seen.get(key)).find(Boolean);
+
+    for (const key of keys) {
+      if (!seen.has(key)) {
+        seen.set(key, lead);
+      }
+    }
+
+    return firstDuplicate ? { ...lead, duplicateId: `sheet-row-${firstDuplicate.rowNumber}` } : lead;
+  });
 }
 
 function parseCsv(csv: string) {
@@ -150,4 +166,8 @@ function normalizePhoneDisplay(value: string) {
   }
 
   return value;
+}
+
+function normalizeIdentity(value: string | undefined) {
+  return (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }

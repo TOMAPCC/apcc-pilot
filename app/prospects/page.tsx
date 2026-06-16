@@ -1,15 +1,15 @@
 import { AppShell } from "@/components/AppShell";
-import { prospects } from "@/lib/demo-data";
+import { getSheetProspects } from "@/lib/sheet-prospects";
 
-const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+export default async function ProspectsPage() {
+  const prospects = await getSheetProspects();
 
-export default function ProspectsPage() {
   return (
     <AppShell>
       <div className="page-title">
         <div>
           <h1>Prospects</h1>
-          <p>Qualification, suivi commercial, projets et prochaines actions.</p>
+          <p>{prospects.length} leads recuperes depuis le Google Sheet APCC, sans contacts de demonstration.</p>
         </div>
         <a className="button" href="/prospects/new">Nouveau prospect</a>
       </div>
@@ -23,7 +23,7 @@ export default function ProspectsPage() {
               <th>Source</th>
               <th>Commercial</th>
               <th>Statut</th>
-              <th>Montant</th>
+              <th>Score</th>
               <th>Prochaine action</th>
             </tr>
           </thead>
@@ -39,7 +39,7 @@ export default function ProspectsPage() {
                 <td>{prospect.source}</td>
                 <td>{prospect.assignedTo}</td>
                 <td><span className="badge">{prospect.status}</span></td>
-                <td>{euro.format(prospect.estimatedBudget)}</td>
+                <td>{prospect.score}/100</td>
                 <td>{prospect.nextAction}</td>
               </tr>
             ))}

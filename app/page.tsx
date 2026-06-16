@@ -1,43 +1,42 @@
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
-import { appointments, prospects, tasks, worksites } from "@/lib/demo-data";
-import { getDashboardMetrics } from "@/lib/crm";
+import { getSheetDashboardMetrics, getSheetProspects } from "@/lib/sheet-prospects";
 
-const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-
-export default function DashboardPage() {
-  const metrics = getDashboardMetrics();
+export default async function DashboardPage() {
+  const prospects = await getSheetProspects();
+  const metrics = getSheetDashboardMetrics(prospects);
+  const latestProspects = prospects.slice(0, 8);
 
   return (
     <AppShell>
       <div className="page-title">
         <div>
           <h1>Tableau de bord</h1>
-          <p>Vue operationnelle des leads, relances, signatures et chantiers APCC.</p>
+          <p>Vue operationnelle basee sur le Google Sheet APCC, sans donnees fictives.</p>
         </div>
         <a className="button" href="/prospects/new">Creer un prospect</a>
       </div>
 
       <section className="grid cols-4">
-        <MetricCard label="Nouveaux prospects" value={metrics.newProspects} hint="A traiter rapidement" />
-        <MetricCard label="Relances aujourd'hui" value={metrics.followUpsToday} hint={`${metrics.overdueTasks} en retard`} />
-        <MetricCard label="CA signe" value={euro.format(metrics.signedRevenue)} hint={`${metrics.conversionRate}% transformation demo`} />
-        <MetricCard label="Prevision ponderee" value={euro.format(metrics.forecastRevenue)} hint="Selon etape pipeline" />
+        <MetricCard label="Leads importes" value={metrics.totalLeads} hint="Depuis Google Sheets" />
+        <MetricCard label="Nouveaux leads" value={metrics.newProspects} hint="A qualifier" />
+        <MetricCard label="A contacter" value={metrics.toContact} hint="Relance telephone/e-mail" />
+        <MetricCard label="Rendez-vous detectes" value={metrics.appointments} hint="D'apres les commentaires" />
       </section>
 
       <section className="grid cols-3" style={{ marginTop: 16 }}>
         <div className="panel">
           <div className="section-head">
-            <h2>Priorites commerciales</h2>
-            <span className="badge hot">{metrics.quotesToFollow} devis</span>
+            <h2>Derniers leads</h2>
+            <span className="badge hot">{metrics.lost} hors cible/perdus</span>
           </div>
           <table className="table">
             <tbody>
-              {prospects.slice(0, 4).map((prospect) => (
+              {latestProspects.map((prospect) => (
                 <tr key={prospect.id}>
                   <td>
                     <strong>{prospect.firstName} {prospect.lastName}</strong>
-                    <div className="muted">{prospect.city} - {prospect.projectTypes.join(", ")}</div>
+                    <div className="muted">{prospect.postalCode} - {prospect.projectTypes.join(", ")}</div>
                   </td>
                   <td><span className="badge">{prospect.status}</span></td>
                 </tr>
@@ -48,28 +47,29 @@ export default function DashboardPage() {
 
         <div className="panel">
           <div className="section-head">
-            <h2>Rendez-vous</h2>
-            <span className="badge blue">{metrics.upcomingAppointments} a venir</span>
+            <h2>Rendez-vous reperes</h2>
+            <span className="badge blue">{metrics.appointments}</span>
           </div>
-          {appointments.map((appointment) => (
-            <div className="deal-card" key={appointment.id}>
-              <strong>{appointment.title}</strong>
-              <p>{new Date(appointment.startsAt).toLocaleString("fr-FR")} - {appointment.owner}</p>
-              <p>{appointment.address}</p>
+          {prospects.filter((prospect) => prospect.status === "Rendez-vous planifie").slice(0, 5).map((prospect) => (
+            <div className="deal-card" key={prospect.id}>
+              <strong>{prospect.firstName} {prospect.lastName}</strong>
+              <p>{prospect.phone}</p>
+              <p>{prospect.comments || "Commentaire Google Sheet"}</p>
             </div>
           ))}
+          {!metrics.appointments ? <p className="muted">Aucun rendez-vous detecte dans les commentaires.</p> : null}
         </div>
 
         <div className="panel">
           <div className="section-head">
-            <h2>Chantiers</h2>
-            <span className="badge">{metrics.worksitesInProgress} ouverts</span>
+            <h2>A traiter</h2>
+            <span className="badge">{metrics.toContact + metrics.newProspects}</span>
           </div>
-          {worksites.map((worksite) => (
-            <div className="deal-card" key={worksite.id}>
-              <strong>{worksite.reference}</strong>
-              <p>{worksite.clientName} - {worksite.type}</p>
-              <p>{worksite.status} - {euro.format(worksite.amount)}</p>
+          {prospects.filter((prospect) => prospect.status === "A contacter" || prospect.status === "Nouveau lead").slice(0, 5).map((prospect) => (
+            <div className="deal-card" key={prospect.id}>
+              <strong>{prospect.firstName} {prospect.lastName}</strong>
+              <p>{prospect.nextAction}</p>
+              <p>{prospect.phone} - {prospect.email}</p>
             </div>
           ))}
         </div>
@@ -77,31 +77,13 @@ export default function DashboardPage() {
 
       <section className="panel" style={{ marginTop: 16 }}>
         <div className="section-head">
-          <h2>Taches critiques</h2>
-          <a className="secondary-button" href="/tasks">Tout voir</a>
+          <h2>Toutes les donnees viennent du Google Sheet</h2>
+          <a className="secondary-button" href="/admin/connectors">Synchroniser</a>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Tache</th>
-              <th>Responsable</th>
-              <th>Echeance</th>
-              <th>Priorite</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((task) => (
-              <tr key={task.id}>
-                <td>{task.title}</td>
-                <td>{task.owner}</td>
-                <td>{new Date(task.dueDate).toLocaleDateString("fr-FR")}</td>
-                <td><span className="badge hot">{task.priority}</span></td>
-                <td>{task.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <p className="muted">
+          Les anciens contacts de demonstration ont ete retires. Les prochaines etapes pour un usage quotidien sont
+          la sauvegarde PostgreSQL des statuts, des relances et des rendez-vous.
+        </p>
       </section>
     </AppShell>
   );

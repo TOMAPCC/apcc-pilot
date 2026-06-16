@@ -8,7 +8,7 @@ CRM commercial et suivi de chantier pour APCC Neuf et Renovation.
 - UI responsive en CSS natif avec l'identite APCC.
 - API routes locales pour prospects, pipeline, taches, import CSV et connecteurs.
 - Prisma schema pret pour PostgreSQL.
-- Mode demonstration sans secrets externes.
+- Lecture live du Google Sheet APCC sans secrets externes.
 
 ## Installation
 
@@ -20,14 +20,14 @@ npm run dev
 
 Ouvrir `http://localhost:3000`.
 
-## Comptes de demonstration
+## Comptes de test UI
 
 - `admin@apcc.fr` / role Administrateur
 - `direction@apcc.fr` / role Direction
 - `commercial@apcc.fr` / role Commercial
 - `travaux@apcc.fr` / role Conducteur de travaux
 
-L'authentification reelle sera branchee en Phase 1 avancee avec sessions serveur, hachage de mots de passe et controle de permissions cote serveur.
+L'authentification reelle sera branchee avec sessions serveur, hachage de mots de passe et controle de permissions cote serveur.
 
 ## Connexion Google
 
@@ -79,11 +79,10 @@ Payload minimal:
 ## Fonctionnalites terminees dans cet increment
 
 - Dashboard metier APCC avec indicateurs commerciaux et chantiers.
-- Pipeline Kanban avec changement d'etape cote client.
-- Liste prospects, creation prospect, controle anti-doublon.
-- Taches et rendez-vous de demonstration.
+- Pipeline Kanban alimente par les leads Google Sheet.
+- Liste prospects issue du Google Sheet, sans contacts fictifs.
 - Import CSV avec parsing local et detection des doublons.
-- Administration des connecteurs avec mode simulation.
+- Administration des connecteurs avec lecture live Google Sheets public CSV.
 - Schema Prisma couvrant les entites finales.
 - Documentation d'installation et variables d'environnement.
 
