@@ -31,7 +31,10 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       </aside>
       <main className="main">
         <header className="topbar">
-          <input className="search" placeholder="Rechercher un prospect, client, devis, chantier..." />
+          <form action="/prospects" className="global-search">
+            <input className="search" name="q" placeholder="Rechercher nom, telephone, email, ville, source..." />
+            <button className="secondary-button" type="submit">Rechercher</button>
+          </form>
           <div className="muted">Administrateur APCC</div>
         </header>
         <div className="content">{children}</div>
