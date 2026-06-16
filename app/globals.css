@@ -186,6 +186,11 @@ textarea {
   box-shadow: 0 10px 24px rgba(138, 20, 41, .2);
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
 .secondary-button {
   background: white;
   border-color: var(--line);
@@ -379,6 +384,12 @@ textarea {
   background: #edf6ff;
   color: var(--apcc-blue);
   border: 1px solid #cce7ff;
+}
+
+.toast.warning {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: var(--warning);
 }
 
 .eyebrow {
@@ -655,6 +666,15 @@ textarea {
 
 .mail-preview textarea {
   min-height: 230px;
+}
+
+.rich-mail-preview {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: 520px;
+  overflow: auto;
+  padding: 18px;
 }
 
 .closer-actions {

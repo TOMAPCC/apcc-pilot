@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { buildCloserEmail } from "@/lib/closer-email";
 import type { Priority, Prospect, ProspectStatus } from "@/lib/types";
 
 const statuses: ProspectStatus[] = [
@@ -23,6 +24,8 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   const [draft, setDraft] = useState(prospect);
   const [saved, setSaved] = useState(false);
   const [mailCopied, setMailCopied] = useState(false);
+  const [sendingMail, setSendingMail] = useState(false);
+  const [sendStatus, setSendStatus] = useState<"idle" | "sent" | "not-configured" | "error">("idle");
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -47,8 +50,8 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   }
 
   const closerMail = useMemo(() => buildCloserEmail(draft), [draft]);
-  const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(draft.email)}&su=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.body)}`;
-  const mailtoHref = `mailto:${draft.email}?subject=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.body)}`;
+  const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(draft.email)}&su=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.text)}`;
+  const mailtoHref = `mailto:${draft.email}?subject=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.text)}`;
 
   function toggleNoAnswer(checked: boolean) {
     setSaved(false);
@@ -61,9 +64,48 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   }
 
   async function copyCloserMail() {
-    await window.navigator.clipboard.writeText(`${closerMail.subject}\n\n${closerMail.body}`);
+    if (typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([closerMail.html], { type: "text/html" }),
+          "text/plain": new Blob([`${closerMail.subject}\n\n${closerMail.text}`], { type: "text/plain" })
+        })
+      ]);
+    } else {
+      await navigator.clipboard.writeText(`${closerMail.subject}\n\n${closerMail.text}`);
+    }
     setMailCopied(true);
     window.setTimeout(() => setMailCopied(false), 2400);
+  }
+
+  async function sendViaGmail() {
+    setSendingMail(true);
+    setSendStatus("idle");
+
+    try {
+      const response = await fetch("/api/gmail/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prospect: draft })
+      });
+
+      if (response.ok) {
+        setSendStatus("sent");
+        setDraft((current) => ({
+          ...current,
+          status: "N'a pas repondu",
+          nextAction: "Relance Gmail envoyee puis rappel sous 24h",
+          nextFollowUp: tomorrowIso()
+        }));
+        return;
+      }
+
+      setSendStatus(response.status === 409 ? "not-configured" : "error");
+    } catch {
+      setSendStatus("error");
+    } finally {
+      setSendingMail(false);
+    }
   }
 
   return (
@@ -117,7 +159,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
         <div>
           <span className="eyebrow">Relance intelligente</span>
           <h2>Prospect injoignable</h2>
-          <p>Quand le lead ne decroche pas, coche ici : le CRM prepare un mail court, direct et oriente rendez-vous.</p>
+          <p>Quand le lead ne decroche pas, coche ici : le CRM prepare un mail HTML impactant, oriente rappel et rendez-vous.</p>
         </div>
 
         <label className="switch-row">
@@ -136,17 +178,24 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
           </div>
           <div className="field">
             <label>Mail propose</label>
-            <textarea value={closerMail.body} readOnly />
+            <div className="rich-mail-preview" dangerouslySetInnerHTML={{ __html: closerMail.html }} />
           </div>
         </div>
 
         <div className="closer-actions">
           <button className="secondary-button" type="button" onClick={copyCloserMail}>
-            {mailCopied ? "Mail copie" : "Copier le mail"}
+            {mailCopied ? "Mail formate copie" : "Copier le mail formate"}
           </button>
           <a className="secondary-button" href={mailtoHref}>Ouvrir Mail</a>
           <a className="button" href={gmailHref} target="_blank" rel="noreferrer">Ouvrir dans Gmail</a>
+          <button className="button" type="button" onClick={sendViaGmail} disabled={sendingMail || !draft.email}>
+            {sendingMail ? "Envoi..." : "Envoyer via Gmail"}
+          </button>
         </div>
+
+        {sendStatus === "sent" ? <p className="toast">Relance envoyee depuis Gmail. Statut passe en n'a pas repondu.</p> : null}
+        {sendStatus === "not-configured" ? <p className="toast warning">Gmail n'est pas encore connecte cote serveur. Il faut ajouter l'OAuth Google dans Vercel pour activer l'envoi automatique.</p> : null}
+        {sendStatus === "error" ? <p className="toast warning">L'envoi Gmail a echoue. Verifie la connexion Gmail ou utilise le bouton Ouvrir dans Gmail.</p> : null}
       </section>
 
       <section className="timeline-panel">
@@ -158,30 +207,6 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
       </section>
     </div>
   );
-}
-
-function buildCloserEmail(prospect: Prospect) {
-  const city = prospect.city ? ` sur ${prospect.city}` : "";
-  const project = prospect.projectTypes[0] ?? "votre projet de renovation energetique";
-  const subject = `${prospect.firstName}, on a essaye de vous joindre pour votre projet`;
-  const body = `Bonjour ${prospect.firstName},
-
-Je me permets de vous envoyer ce message car nous avons essaye de vous joindre au sujet de votre demande concernant ${project}${city}.
-
-Votre profil semble interessant pour avancer rapidement : l'objectif est simplement de valider 2 ou 3 informations, confirmer la faisabilite et voir si un rendez-vous avec APCC peut vous faire gagner du temps sur votre projet.
-
-Est-ce que vous pouvez me rappeler aujourd'hui, ou me repondre avec le meilleur creneau pour vous joindre ?
-
-Vous pouvez aussi prendre les devants en m'indiquant :
-- le meilleur horaire pour vous appeler ;
-- si le projet est toujours d'actualite ;
-- l'adresse exacte du chantier si elle est differente.
-
-Bien cordialement,
-Thomas - APCC
-Neuf et renovation`;
-
-  return { subject: subject.replace(/\s+/g, " ").trim(), body };
 }
 
 function tomorrowIso() {
