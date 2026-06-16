@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BusinessLine, Prospect, ProspectStatus } from "@/lib/types";
 
 const statuses: Array<ProspectStatus | "Tous"> = [
@@ -9,7 +9,12 @@ const statuses: Array<ProspectStatus | "Tous"> = [
   "Nouveau lead",
   "A qualifier",
   "A contacter",
+  "N'a pas repondu",
+  "Contact etabli",
   "Rendez-vous planifie",
+  "Devis envoye",
+  "Negociation",
+  "Dossier signe",
   "Dossier perdu"
 ];
 
@@ -19,18 +24,23 @@ export function ProspectWorkspace({
   prospects,
   initialQuery
 }: Readonly<{ prospects: Prospect[]; initialQuery?: string }>) {
+  const [visibleProspects, setVisibleProspects] = useState(prospects);
   const [query, setQuery] = useState(initialQuery ?? "");
   const [source, setSource] = useState("Toutes");
   const [businessLine, setBusinessLine] = useState<(typeof businessLines)[number]>("Toutes");
   const [status, setStatus] = useState<(typeof statuses)[number]>("Tous");
   const [sort, setSort] = useState("recent");
 
-  const sources = useMemo(() => ["Toutes", ...Array.from(new Set(prospects.map((prospect) => prospect.source)))], [prospects]);
+  useEffect(() => {
+    setVisibleProspects(applyStoredProspectEdits(prospects));
+  }, [prospects]);
+
+  const sources = useMemo(() => ["Toutes", ...Array.from(new Set(visibleProspects.map((prospect) => prospect.source)))], [visibleProspects]);
 
   const filtered = useMemo(() => {
     const normalizedQuery = normalize(query);
 
-    return prospects
+    return visibleProspects
       .filter((prospect) => source === "Toutes" || prospect.source === source)
       .filter((prospect) => businessLine === "Toutes" || prospect.businessLine === businessLine)
       .filter((prospect) => status === "Tous" || prospect.status === status)
@@ -54,11 +64,11 @@ export function ProspectWorkspace({
         if (sort === "source") return a.source.localeCompare(b.source);
         return Date.parse(b.createdAt) - Date.parse(a.createdAt);
       });
-  }, [prospects, query, source, businessLine, status, sort]);
+  }, [visibleProspects, query, source, businessLine, status, sort]);
 
   const highPriority = filtered.filter((prospect) => prospect.priority === "Haute" || prospect.priority === "Urgente").length;
-  const heatPumpCount = prospects.filter((prospect) => prospect.businessLine === "Pompe a chaleur").length;
-  const primeAdaptCount = prospects.filter((prospect) => prospect.businessLine === "Prime Adapt").length;
+  const heatPumpCount = visibleProspects.filter((prospect) => prospect.businessLine === "Pompe a chaleur").length;
+  const primeAdaptCount = visibleProspects.filter((prospect) => prospect.businessLine === "Prime Adapt").length;
 
   return (
     <div className="workspace">
@@ -136,4 +146,11 @@ function normalize(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
+}
+
+function applyStoredProspectEdits(prospects: Prospect[]) {
+  return prospects.map((prospect) => {
+    const stored = window.localStorage.getItem(`apcc-prospect-edits:${prospect.id}`);
+    return stored ? { ...prospect, ...JSON.parse(stored) } : prospect;
+  });
 }

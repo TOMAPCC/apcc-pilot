@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { pipelineStages } from "@/lib/demo-data";
 import type { BusinessLine, Prospect, ProspectStatus } from "@/lib/types";
 
@@ -9,6 +9,10 @@ const businessLines: Array<BusinessLine | "Toutes"> = ["Toutes", "Pompe a chaleu
 export function PipelineBoard({ initialProspects }: Readonly<{ initialProspects: Prospect[] }>) {
   const [prospects, setProspects] = useState(initialProspects);
   const [businessLine, setBusinessLine] = useState<(typeof businessLines)[number]>("Toutes");
+
+  useEffect(() => {
+    setProspects(applyStoredProspectEdits(initialProspects));
+  }, [initialProspects]);
 
   function moveProspect(id: string, status: ProspectStatus) {
     setProspects((items) => items.map((item) => (item.id === id ? { ...item, status } : item)));
@@ -49,6 +53,13 @@ export function PipelineBoard({ initialProspects }: Readonly<{ initialProspects:
       </section>
     </div>
   );
+}
+
+function applyStoredProspectEdits(prospects: Prospect[]) {
+  return prospects.map((prospect) => {
+    const stored = window.localStorage.getItem(`apcc-prospect-edits:${prospect.id}`);
+    return stored ? { ...prospect, ...JSON.parse(stored) } : prospect;
+  });
 }
 
 function formatBusinessLine(value: BusinessLine | "Toutes") {

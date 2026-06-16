@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildCloserEmail } from "@/lib/closer-email";
-import type { Priority, Prospect, ProspectStatus } from "@/lib/types";
+import type { Appointment, Priority, Prospect, ProspectStatus } from "@/lib/types";
 
 const statuses: ProspectStatus[] = [
   "Nouveau lead",
@@ -18,10 +18,18 @@ const statuses: ProspectStatus[] = [
 ];
 
 const priorities: Priority[] = ["Basse", "Normale", "Haute", "Urgente"];
+const APPOINTMENTS_KEY = "apcc-appointments";
+
+type ProspectDraft = Prospect & {
+  appointmentStartsAt?: string;
+  appointmentAddress?: string;
+  appointmentNotes?: string;
+  lossReason?: string;
+};
 
 export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   const storageKey = `apcc-prospect-edits:${prospect.id}`;
-  const [draft, setDraft] = useState(prospect);
+  const [draft, setDraft] = useState<ProspectDraft>(prospect);
   const [saved, setSaved] = useState(false);
   const [mailCopied, setMailCopied] = useState(false);
   const [sendingMail, setSendingMail] = useState(false);
@@ -39,13 +47,14 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
   }, [draft]);
 
-  function update<K extends keyof Prospect>(key: K, value: Prospect[K]) {
+  function update<K extends keyof ProspectDraft>(key: K, value: ProspectDraft[K]) {
     setSaved(false);
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
   function save() {
     window.localStorage.setItem(storageKey, JSON.stringify(draft));
+    syncAppointment(draft);
     setSaved(true);
   }
 
@@ -132,7 +141,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
           <h2>Fiche prospect editable</h2>
           <button className="button" onClick={save}>Enregistrer</button>
         </div>
-        {saved ? <p className="toast">Modifications sauvegardees dans ce navigateur. La prochaine etape est la base PostgreSQL pour partager ces edits a toute l'equipe.</p> : null}
+        {saved ? <p className="toast">{buildSaveMessage(draft)}</p> : null}
 
         <div className="form-grid">
           <div className="field"><label>Prenom</label><input value={draft.firstName} onChange={(event) => update("firstName", event.target.value)} /></div>
@@ -148,6 +157,52 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
           <div className="field"><label>Chauffage actuel</label><input value={draft.heatingSystem ?? ""} onChange={(event) => update("heatingSystem", event.target.value)} /></div>
           <div className="field"><label>Prochaine action</label><input value={draft.nextAction} onChange={(event) => update("nextAction", event.target.value)} /></div>
         </div>
+
+        {draft.status === "Rendez-vous planifie" ? (
+          <div className="qualification-panel">
+            <span className="eyebrow">Rendez-vous qualifie</span>
+            <div className="form-grid">
+              <div className="field">
+                <label>Date et heure du rendez-vous</label>
+                <input
+                  type="datetime-local"
+                  value={toDatetimeLocal(draft.appointmentStartsAt)}
+                  onChange={(event) => update("appointmentStartsAt", event.target.value ? new Date(event.target.value).toISOString() : "")}
+                />
+              </div>
+              <div className="field">
+                <label>Adresse du rendez-vous</label>
+                <input
+                  value={draft.appointmentAddress ?? draft.worksiteAddress ?? draft.address}
+                  onChange={(event) => update("appointmentAddress", event.target.value)}
+                  placeholder="Adresse client ou chantier"
+                />
+              </div>
+            </div>
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>Notes rendez-vous</label>
+              <textarea
+                value={draft.appointmentNotes ?? ""}
+                onChange={(event) => update("appointmentNotes", event.target.value)}
+                placeholder="Contexte, besoin, infos a valider sur place..."
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {draft.status === "Dossier perdu" ? (
+          <div className="qualification-panel lost">
+            <span className="eyebrow">Motif de perte</span>
+            <div className="field">
+              <label>Pourquoi ce lead est perdu ?</label>
+              <textarea
+                value={draft.lossReason ?? ""}
+                onChange={(event) => update("lossReason", event.target.value)}
+                placeholder="Faux numero, hors zone, pas interesse, non eligible..."
+              />
+            </div>
+          </div>
+        ) : null}
 
         <div className="field" style={{ marginTop: 14 }}>
           <label>Commentaires, questions et contexte</label>
@@ -213,4 +268,61 @@ function tomorrowIso() {
   const date = new Date();
   date.setDate(date.getDate() + 1);
   return date.toISOString();
+}
+
+function syncAppointment(prospect: ProspectDraft) {
+  const stored = window.localStorage.getItem(APPOINTMENTS_KEY);
+  const appointments = stored ? (JSON.parse(stored) as Appointment[]) : [];
+  const id = `appointment-${prospect.id}`;
+  const existing = appointments.filter((appointment) => appointment.id !== id);
+
+  if (prospect.status !== "Rendez-vous planifie") {
+    window.localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(existing));
+    return;
+  }
+
+  const startsAt = prospect.appointmentStartsAt || tomorrowAtNine();
+  const appointment: Appointment = {
+    id,
+    title: `${prospect.firstName} ${prospect.lastName} - ${prospect.businessLine === "Prime Adapt" ? "Prime Adapt" : "Pompe a chaleur"}`,
+    prospectId: prospect.id,
+    owner: "Thomas Cauquil",
+    startsAt,
+    address: prospect.appointmentAddress || prospect.worksiteAddress || prospect.address || `${prospect.postalCode} ${prospect.city}`,
+    template: prospect.businessLine === "Prime Adapt" ? "RDV Prime Adapt" : "RDV pompe a chaleur"
+  };
+
+  window.localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify([...existing, appointment]));
+}
+
+function buildSaveMessage(prospect: ProspectDraft) {
+  if (prospect.status === "Rendez-vous planifie") {
+    return "Fiche enregistree. Le prospect est passe dans le pipeline Rendez-vous planifie et le rendez-vous est visible dans la page Rendez-vous.";
+  }
+
+  if (prospect.status === "Dossier perdu") {
+    return "Fiche enregistree. Le prospect est classe en dossier perdu et sort du flux actif.";
+  }
+
+  if (prospect.status === "Dossier signe") {
+    return "Fiche enregistree. Le prospect est classe en dossier signe dans le pipeline.";
+  }
+
+  return "Fiche enregistree. Le pipeline reprend automatiquement ce statut.";
+}
+
+function tomorrowAtNine() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(9, 0, 0, 0);
+  return date.toISOString();
+}
+
+function toDatetimeLocal(value: string | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60_000);
+  return local.toISOString().slice(0, 16);
 }

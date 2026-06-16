@@ -6,8 +6,7 @@ const nav = [
   ["Pipeline", "/pipeline"],
   ["Taches", "/tasks"],
   ["Rendez-vous", "/appointments"],
-  ["Chantiers", "/worksites"],
-  ["Administration", "/admin/connectors"]
+  ["Chantiers", "/worksites"]
 ] as const;
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -35,7 +34,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
             <input className="search" name="q" placeholder="Rechercher nom, telephone, email, ville, source..." />
             <button className="secondary-button" type="submit">Rechercher</button>
           </form>
-          <div className="muted">Administrateur APCC</div>
+          <div className="muted">Thomas Cauquil - APCC</div>
         </header>
         <div className="content">{children}</div>
       </main>
