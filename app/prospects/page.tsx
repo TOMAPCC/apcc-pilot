@@ -1,15 +1,15 @@
 import { AppShell } from "@/components/AppShell";
-import { getSheetProspects } from "@/lib/sheet-prospects";
+import { getCrmProspects } from "@/lib/sheet-prospects";
 
 export default async function ProspectsPage() {
-  const prospects = await getSheetProspects();
+  const prospects = await getCrmProspects();
 
   return (
     <AppShell>
       <div className="page-title">
         <div>
           <h1>Prospects</h1>
-          <p>{prospects.length} leads recuperes depuis Moktar Mazard dans le Google Sheet APCC.</p>
+          <p>{prospects.length} leads recuperes depuis Google Sheets et ClubTravaux.</p>
         </div>
         <a className="button" href="/prospects/new">Nouveau prospect</a>
       </div>

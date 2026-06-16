@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/AppShell";
 import { PipelineBoard } from "@/components/PipelineBoard";
-import { getSheetProspects } from "@/lib/sheet-prospects";
+import { getCrmProspects } from "@/lib/sheet-prospects";
 
 export default async function PipelinePage() {
-  const prospects = await getSheetProspects();
+  const prospects = await getCrmProspects();
 
   return (
     <AppShell>

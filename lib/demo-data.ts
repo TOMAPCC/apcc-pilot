@@ -40,10 +40,10 @@ export const connectors: Connector[] = [
     id: "c-clubtravaux",
     name: "clubtravaux.app",
     type: "API externe",
-    status: "Simulation",
-    lastSync: "2026-06-14T18:20:00.000Z",
-    importedCount: 6,
-    errors: ["API officielle non configuree: utiliser webhook ou import CSV en attente."]
+    status: "Actif",
+    lastSync: "2026-06-16T13:21:00.000Z",
+    importedCount: 7,
+    errors: ["Import manuel depuis Clubtravaux - Export 16-6-2026.xlsx. API officielle a connecter ensuite."]
   },
   {
     id: "c-csv",

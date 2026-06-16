@@ -17,8 +17,8 @@ const prospectSchema = z.object({
 });
 
 export async function GET() {
-  const { getSheetProspects } = await import("@/lib/sheet-prospects");
-  const prospects = await getSheetProspects();
+  const { getCrmProspects } = await import("@/lib/sheet-prospects");
+  const prospects = await getCrmProspects();
   return NextResponse.json({ prospects });
 }
 

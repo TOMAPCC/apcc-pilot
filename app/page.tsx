@@ -1,18 +1,19 @@
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
-import { getSheetDashboardMetrics, getSheetProspects } from "@/lib/sheet-prospects";
+import { getCrmProspects, getSheetDashboardMetrics } from "@/lib/sheet-prospects";
 
 export default async function DashboardPage() {
-  const prospects = await getSheetProspects();
+  const prospects = await getCrmProspects();
   const metrics = getSheetDashboardMetrics(prospects);
   const latestProspects = prospects.slice(0, 8);
+  const clubTravauxCount = prospects.filter((prospect) => prospect.source === "ClubTravaux").length;
 
   return (
     <AppShell>
       <div className="page-title">
         <div>
           <h1>Tableau de bord</h1>
-          <p>Vue operationnelle basee sur les nouveaux leads Google Sheet a partir de Moktar Mazard.</p>
+          <p>Vue operationnelle basee sur Google Sheets et ClubTravaux.</p>
         </div>
         <a className="button" href="/prospects/new">Creer un prospect</a>
       </div>
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
         <MetricCard label="Leads importes" value={metrics.totalLeads} hint="Depuis Google Sheets" />
         <MetricCard label="Nouveaux leads" value={metrics.newProspects} hint="A qualifier" />
         <MetricCard label="A contacter" value={metrics.toContact} hint="Relance telephone/e-mail" />
-        <MetricCard label="Rendez-vous detectes" value={metrics.appointments} hint="D'apres les commentaires" />
+        <MetricCard label="ClubTravaux" value={clubTravauxCount} hint="Export du 16/06/2026" />
       </section>
 
       <section className="grid cols-3" style={{ marginTop: 16 }}>
@@ -81,7 +82,7 @@ export default async function DashboardPage() {
           <a className="secondary-button" href="/admin/connectors">Synchroniser</a>
         </div>
         <p className="muted">
-          Les anciens contacts et les anciennes lignes avant Moktar Mazard sont ignores. Les prochaines etapes pour un usage quotidien sont
+          Les anciennes lignes Google Sheet avant Moktar Mazard sont ignorees. Les leads ClubTravaux du fichier exporte sont ajoutes. Les prochaines etapes pour un usage quotidien sont
           la sauvegarde PostgreSQL des statuts, des relances et des rendez-vous.
         </p>
       </section>

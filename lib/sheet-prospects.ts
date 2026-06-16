@@ -1,10 +1,20 @@
 import { fetchAllSheetLeads } from "./sheets-import";
 import type { ImportedLead } from "./sheets-import";
 import type { Priority, Prospect, ProspectStatus } from "./types";
+import { getClubTravauxProspects } from "./clubtravaux-leads";
 
 export async function getSheetProspects() {
   const leads = await fetchAllSheetLeads();
   return leads.map(importedLeadToProspect);
+}
+
+export async function getCrmProspects() {
+  const sheetProspects = await getSheetProspects();
+  const clubTravauxProspects = getClubTravauxProspects();
+
+  return [...sheetProspects, ...clubTravauxProspects].sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
+  );
 }
 
 export function importedLeadToProspect(lead: ImportedLead): Prospect {
