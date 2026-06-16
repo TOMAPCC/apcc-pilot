@@ -539,7 +539,8 @@ textarea {
 
 .identity-panel,
 .editor-panel,
-.timeline-panel {
+.timeline-panel,
+.closer-panel {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -598,12 +599,68 @@ textarea {
 }
 
 .editor-panel,
-.timeline-panel {
+.timeline-panel,
+.closer-panel {
   padding: 18px;
 }
 
-.timeline-panel {
+.timeline-panel,
+.closer-panel {
   grid-column: 1 / -1;
+}
+
+.closer-panel {
+  background:
+    linear-gradient(135deg, rgba(138, 20, 41, .08), rgba(0, 89, 151, .08)),
+    white;
+  display: grid;
+  gap: 14px;
+}
+
+.closer-panel h2 {
+  color: var(--apcc-navy);
+  margin: 0;
+}
+
+.closer-panel p {
+  color: #344054;
+  margin-bottom: 0;
+}
+
+.switch-row {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.switch-row input {
+  height: 18px;
+  width: 18px;
+}
+
+.switch-row span {
+  color: var(--apcc-navy);
+  font-weight: 800;
+}
+
+.mail-preview {
+  display: grid;
+  gap: 12px;
+}
+
+.mail-preview textarea {
+  min-height: 230px;
+}
+
+.closer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .timeline-panel h2 {

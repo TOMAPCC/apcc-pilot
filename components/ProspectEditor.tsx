@@ -7,6 +7,7 @@ const statuses: ProspectStatus[] = [
   "Nouveau lead",
   "A qualifier",
   "A contacter",
+  "N'a pas repondu",
   "Contact etabli",
   "Rendez-vous planifie",
   "Devis envoye",
@@ -21,6 +22,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   const storageKey = `apcc-prospect-edits:${prospect.id}`;
   const [draft, setDraft] = useState(prospect);
   const [saved, setSaved] = useState(false);
+  const [mailCopied, setMailCopied] = useState(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -42,6 +44,26 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   function save() {
     window.localStorage.setItem(storageKey, JSON.stringify(draft));
     setSaved(true);
+  }
+
+  const closerMail = useMemo(() => buildCloserEmail(draft), [draft]);
+  const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(draft.email)}&su=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.body)}`;
+  const mailtoHref = `mailto:${draft.email}?subject=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.body)}`;
+
+  function toggleNoAnswer(checked: boolean) {
+    setSaved(false);
+    setDraft((current) => ({
+      ...current,
+      status: checked ? "N'a pas repondu" : current.status === "N'a pas repondu" ? "A contacter" : current.status,
+      nextAction: checked ? "Relance email closer envoyee puis rappel sous 24h" : current.nextAction,
+      nextFollowUp: checked ? tomorrowIso() : current.nextFollowUp
+    }));
+  }
+
+  async function copyCloserMail() {
+    await window.navigator.clipboard.writeText(`${closerMail.subject}\n\n${closerMail.body}`);
+    setMailCopied(true);
+    window.setTimeout(() => setMailCopied(false), 2400);
   }
 
   return (
@@ -91,12 +113,79 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
         </div>
       </section>
 
+      <section className="closer-panel">
+        <div>
+          <span className="eyebrow">Relance intelligente</span>
+          <h2>Prospect injoignable</h2>
+          <p>Quand le lead ne decroche pas, coche ici : le CRM prepare un mail court, direct et oriente rendez-vous.</p>
+        </div>
+
+        <label className="switch-row">
+          <input
+            type="checkbox"
+            checked={draft.status === "N'a pas repondu"}
+            onChange={(event) => toggleNoAnswer(event.target.checked)}
+          />
+          <span>Marquer comme n'a pas repondu et preparer la relance</span>
+        </label>
+
+        <div className="mail-preview">
+          <div className="field">
+            <label>Objet</label>
+            <input value={closerMail.subject} readOnly />
+          </div>
+          <div className="field">
+            <label>Mail propose</label>
+            <textarea value={closerMail.body} readOnly />
+          </div>
+        </div>
+
+        <div className="closer-actions">
+          <button className="secondary-button" type="button" onClick={copyCloserMail}>
+            {mailCopied ? "Mail copie" : "Copier le mail"}
+          </button>
+          <a className="secondary-button" href={mailtoHref}>Ouvrir Mail</a>
+          <a className="button" href={gmailHref} target="_blank" rel="noreferrer">Ouvrir dans Gmail</a>
+        </div>
+      </section>
+
       <section className="timeline-panel">
         <h2>Chronologie</h2>
         <div className="timeline-item"><span />Lead recu depuis {draft.source}</div>
         <div className="timeline-item"><span />Qualification a effectuer</div>
+        {draft.status === "N'a pas repondu" ? <div className="timeline-item"><span />Relance email closer a envoyer</div> : null}
         <div className="timeline-item"><span />Adresse chantier a confirmer</div>
       </section>
     </div>
   );
+}
+
+function buildCloserEmail(prospect: Prospect) {
+  const city = prospect.city ? ` sur ${prospect.city}` : "";
+  const project = prospect.projectTypes[0] ?? "votre projet de renovation energetique";
+  const subject = `${prospect.firstName}, on a essaye de vous joindre pour votre projet`;
+  const body = `Bonjour ${prospect.firstName},
+
+Je me permets de vous envoyer ce message car nous avons essaye de vous joindre au sujet de votre demande concernant ${project}${city}.
+
+Votre profil semble interessant pour avancer rapidement : l'objectif est simplement de valider 2 ou 3 informations, confirmer la faisabilite et voir si un rendez-vous avec APCC peut vous faire gagner du temps sur votre projet.
+
+Est-ce que vous pouvez me rappeler aujourd'hui, ou me repondre avec le meilleur creneau pour vous joindre ?
+
+Vous pouvez aussi prendre les devants en m'indiquant :
+- le meilleur horaire pour vous appeler ;
+- si le projet est toujours d'actualite ;
+- l'adresse exacte du chantier si elle est differente.
+
+Bien cordialement,
+Thomas - APCC
+Neuf et renovation`;
+
+  return { subject: subject.replace(/\s+/g, " ").trim(), body };
+}
+
+function tomorrowIso() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString();
 }

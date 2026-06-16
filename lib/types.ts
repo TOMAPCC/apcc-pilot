@@ -13,6 +13,7 @@ export type ProspectStatus =
   | "Nouveau lead"
   | "A qualifier"
   | "A contacter"
+  | "N'a pas repondu"
   | "Contact etabli"
   | "Rendez-vous planifie"
   | "Devis envoye"
