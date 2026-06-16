@@ -7,6 +7,8 @@ export default async function DashboardPage() {
   const metrics = getSheetDashboardMetrics(prospects);
   const latestProspects = prospects.slice(0, 8);
   const clubTravauxCount = prospects.filter((prospect) => prospect.source === "ClubTravaux").length;
+  const heatPumpCount = prospects.filter((prospect) => prospect.businessLine === "Pompe a chaleur").length;
+  const primeAdaptCount = prospects.filter((prospect) => prospect.businessLine === "Prime Adapt").length;
 
   return (
     <AppShell>
@@ -19,8 +21,8 @@ export default async function DashboardPage() {
       </div>
 
       <section className="grid cols-4">
-        <MetricCard label="Leads importes" value={metrics.totalLeads} hint="Depuis Google Sheets" />
-        <MetricCard label="Nouveaux leads" value={metrics.newProspects} hint="A qualifier" />
+        <MetricCard label="Pompes a chaleur" value={heatPumpCount} hint="Google Sheets + ClubTravaux" />
+        <MetricCard label="Prime Adapt" value={primeAdaptCount} hint="Salles de bain PMR" />
         <MetricCard label="A contacter" value={metrics.toContact} hint="Relance telephone/e-mail" />
         <MetricCard label="ClubTravaux" value={clubTravauxCount} hint="Export du 16/06/2026" />
       </section>
@@ -38,6 +40,7 @@ export default async function DashboardPage() {
                   <td>
                     <strong>{prospect.firstName} {prospect.lastName}</strong>
                     <div className="muted">{prospect.postalCode} - {prospect.projectTypes.join(", ")}</div>
+                    <span className={prospect.businessLine === "Prime Adapt" ? "source-pill prime" : "source-pill"}>{prospect.businessLine === "Prime Adapt" ? "Prime Adapt'" : "Pompe a chaleur"}</span>
                   </td>
                   <td><span className="badge">{prospect.status}</span></td>
                 </tr>
@@ -82,7 +85,8 @@ export default async function DashboardPage() {
           <a className="secondary-button" href="/admin/connectors">Synchroniser</a>
         </div>
         <p className="muted">
-          Les anciennes lignes Google Sheet avant Moktar Mazard sont ignorees. Les leads ClubTravaux du fichier exporte sont ajoutes. Les prochaines etapes pour un usage quotidien sont
+          Les anciennes lignes pompe a chaleur avant Moktar Mazard sont ignorees. Les leads Prime Adapt du second onglet Google Sheet sont ajoutes dans une activite separee.
+          Les leads ClubTravaux du fichier exporte sont ajoutes. Les prochaines etapes pour un usage quotidien sont
           la sauvegarde PostgreSQL des statuts, des relances et des rendez-vous.
         </p>
       </section>

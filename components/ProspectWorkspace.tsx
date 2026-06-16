@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { Prospect, ProspectStatus } from "@/lib/types";
+import type { BusinessLine, Prospect, ProspectStatus } from "@/lib/types";
 
 const statuses: Array<ProspectStatus | "Tous"> = [
   "Tous",
@@ -13,12 +13,15 @@ const statuses: Array<ProspectStatus | "Tous"> = [
   "Dossier perdu"
 ];
 
+const businessLines: Array<BusinessLine | "Toutes"> = ["Toutes", "Pompe a chaleur", "Prime Adapt"];
+
 export function ProspectWorkspace({
   prospects,
   initialQuery
 }: Readonly<{ prospects: Prospect[]; initialQuery?: string }>) {
   const [query, setQuery] = useState(initialQuery ?? "");
   const [source, setSource] = useState("Toutes");
+  const [businessLine, setBusinessLine] = useState<(typeof businessLines)[number]>("Toutes");
   const [status, setStatus] = useState<(typeof statuses)[number]>("Tous");
   const [sort, setSort] = useState("recent");
 
@@ -29,6 +32,7 @@ export function ProspectWorkspace({
 
     return prospects
       .filter((prospect) => source === "Toutes" || prospect.source === source)
+      .filter((prospect) => businessLine === "Toutes" || prospect.businessLine === businessLine)
       .filter((prospect) => status === "Tous" || prospect.status === status)
       .filter((prospect) => {
         if (!normalizedQuery) return true;
@@ -40,6 +44,8 @@ export function ProspectWorkspace({
           prospect.postalCode,
           prospect.city,
           prospect.source,
+          prospect.businessLine,
+          prospect.projectTypes.join(" "),
           prospect.comments
         ].join(" ")).includes(normalizedQuery);
       })
@@ -48,9 +54,11 @@ export function ProspectWorkspace({
         if (sort === "source") return a.source.localeCompare(b.source);
         return Date.parse(b.createdAt) - Date.parse(a.createdAt);
       });
-  }, [prospects, query, source, status, sort]);
+  }, [prospects, query, source, businessLine, status, sort]);
 
   const highPriority = filtered.filter((prospect) => prospect.priority === "Haute" || prospect.priority === "Urgente").length;
+  const heatPumpCount = prospects.filter((prospect) => prospect.businessLine === "Pompe a chaleur").length;
+  const primeAdaptCount = prospects.filter((prospect) => prospect.businessLine === "Prime Adapt").length;
 
   return (
     <div className="workspace">
@@ -58,17 +66,20 @@ export function ProspectWorkspace({
         <div>
           <span className="eyebrow">Centre de pilotage leads</span>
           <h2>{filtered.length} prospects</h2>
-          <p>Recherche instantanee, filtres par source et ouverture directe des fiches.</p>
+          <p>Recherche instantanee, activites separees et ouverture directe des fiches.</p>
         </div>
         <div className="mini-metrics">
-          <div><strong>{prospects.length}</strong><span>Total CRM</span></div>
+          <div><strong>{heatPumpCount}</strong><span>Pompes a chaleur</span></div>
+          <div><strong>{primeAdaptCount}</strong><span>Prime Adapt</span></div>
           <div><strong>{highPriority}</strong><span>Prioritaires</span></div>
-          <div><strong>{sources.length - 1}</strong><span>Sources</span></div>
         </div>
       </section>
 
       <section className="filters-bar">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un nom, telephone, e-mail, ville..." />
+        <select value={businessLine} onChange={(event) => setBusinessLine(event.target.value as typeof businessLine)}>
+          {businessLines.map((item) => <option key={item} value={item}>{formatBusinessLine(item)}</option>)}
+        </select>
         <select value={source} onChange={(event) => setSource(event.target.value)}>
           {sources.map((item) => <option key={item}>{item}</option>)}
         </select>
@@ -86,7 +97,7 @@ export function ProspectWorkspace({
         {filtered.map((prospect) => (
           <Link className="lead-card" href={`/prospects/${prospect.id}`} key={prospect.id}>
             <div className="lead-card-head">
-              <span className={prospect.source === "ClubTravaux" ? "source-pill club" : "source-pill"}>{prospect.source}</span>
+              <span className={getSourceClassName(prospect)}>{formatBusinessLine(prospect.businessLine)}</span>
               <span className="score-ring">{prospect.score}</span>
             </div>
             <strong>{prospect.firstName} {prospect.lastName}</strong>
@@ -105,6 +116,18 @@ export function ProspectWorkspace({
       </section>
     </div>
   );
+}
+
+function formatBusinessLine(value: BusinessLine | "Toutes") {
+  if (value === "Pompe a chaleur") return "Pompes a chaleur";
+  if (value === "Prime Adapt") return "Prime Adapt'";
+  return value;
+}
+
+function getSourceClassName(prospect: Prospect) {
+  if (prospect.businessLine === "Prime Adapt") return "source-pill prime";
+  if (prospect.source === "ClubTravaux") return "source-pill club";
+  return "source-pill";
 }
 
 function normalize(value: string) {

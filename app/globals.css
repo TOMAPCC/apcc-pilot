@@ -453,8 +453,17 @@ textarea {
 
 .filters-bar {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 180px 210px 160px;
+  grid-template-columns: minmax(240px, 1fr) 180px 180px 210px 160px;
   gap: 10px;
+}
+
+.filters-bar.compact {
+  grid-template-columns: minmax(220px, 320px);
+}
+
+.pipeline-workspace {
+  display: grid;
+  gap: 14px;
 }
 
 .filters-bar input,
@@ -527,6 +536,11 @@ textarea {
 .source-pill.club {
   background: #edf6ff;
   color: var(--apcc-blue);
+}
+
+.source-pill.prime {
+  background: #f1f8e8;
+  color: #357a38;
 }
 
 .score-ring {

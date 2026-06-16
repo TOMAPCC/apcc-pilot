@@ -12,7 +12,8 @@ const payloadSchema = z.object({
     heatingSystem: z.string().optional(),
     phone: z.string().default(""),
     address: z.string().default(""),
-    worksiteAddress: z.string().default("")
+    worksiteAddress: z.string().default(""),
+    businessLine: z.enum(["Pompe a chaleur", "Prime Adapt"]).optional()
   })
 });
 

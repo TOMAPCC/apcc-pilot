@@ -35,6 +35,7 @@ export default function NewProspectPage() {
           <div className="field"><label>Adresse chantier</label><input name="worksiteAddress" required /></div>
           <div className="field"><label>Code postal</label><input name="postalCode" required /></div>
           <div className="field"><label>Ville</label><input name="city" required /></div>
+          <div className="field"><label>Activite</label><select name="businessLine"><option value="Pompe a chaleur">Pompe a chaleur</option><option value="Prime Adapt">Prime Adapt - salle de bain PMR</option></select></div>
           <div className="field"><label>Projet</label><input name="projectTypes" placeholder="Pompe a chaleur air/eau; Climatisation" /></div>
           <div className="field"><label>Source</label><select name="source"><option>Google Sheets</option><option>clubtravaux.app</option><option>Site web</option><option>Import CSV</option></select></div>
           <div className="field"><label>Budget estime</label><input name="estimatedBudget" type="number" min="0" defaultValue="0" /></div>

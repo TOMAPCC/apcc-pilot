@@ -3,9 +3,13 @@ import type { Prospect } from "./types";
 export type CloserEmailInput = Pick<
   Prospect,
   "firstName" | "email" | "postalCode" | "city" | "projectTypes" | "heatingSystem" | "phone" | "address" | "worksiteAddress"
->;
+> & { businessLine?: Prospect["businessLine"] };
 
 export function buildCloserEmail(prospect: CloserEmailInput) {
+  if (prospect.businessLine === "Prime Adapt") {
+    return buildPrimeAdaptEmail(prospect);
+  }
+
   const firstName = prospect.firstName || "Bonjour";
   const sector = prospect.postalCode ? `le secteur de ${prospect.postalCode}` : prospect.city || "votre secteur";
   const project = prospect.projectTypes[0] || "l'installation d'une pompe à chaleur";
@@ -117,6 +121,92 @@ Neuf et rénovation`;
       <p><strong>Quel serait le meilleur moment pour vous joindre : plutôt en journée ou en fin d'après-midi ?</strong></p>
 
       <p>Au plaisir d'échanger avec vous prochainement.</p>
+      <p>Bien cordialement,</p>
+      <p><strong>Thomas - APCC</strong><br>Neuf et rénovation</p>
+    </div>
+  `;
+
+  return { subject, text, html };
+}
+
+function buildPrimeAdaptEmail(prospect: CloserEmailInput) {
+  const firstName = prospect.firstName || "Bonjour";
+  const sector = prospect.postalCode ? `le secteur de ${prospect.postalCode}` : prospect.city || "votre secteur";
+  const subject = `${firstName}, suite à votre demande Prime Adapt'`;
+  const text = `Bonjour,
+
+Je me permets de revenir vers vous à la suite de votre demande concernant l'adaptation de votre salle de bain sur ${sector}.
+
+Nous avons essayé de vous joindre, car votre projet peut potentiellement entrer dans le cadre de MaPrimeAdapt' et des aides mobilisables pour sécuriser votre logement.
+
+L'objectif de notre échange
+
+Un premier appel de quelques minutes nous permettra simplement de :
+- confirmer votre situation et le logement concerné ;
+- vérifier les premiers critères d'éligibilité ;
+- comprendre l'aménagement nécessaire dans votre salle de bain ;
+- convenir, si votre situation le permet, d'un rendez-vous personnalisé avec APCC.
+
+Ce premier échange est entièrement gratuit et sans engagement.
+
+Pourquoi faire le point rapidement ?
+
+Les conditions d'éligibilité, les plafonds de revenus et les délais d'instruction peuvent évoluer.
+
+Il serait dommage de laisser votre demande sans réponse alors qu'une solution utile et financée en partie peut peut-être être mise en place pour votre logement.
+
+Comment avancer ?
+
+Vous pouvez me rappeler directement aujourd'hui, ou répondre à ce mail en m'indiquant :
+- le meilleur numéro pour vous joindre ;
+- le créneau horaire qui vous convient ;
+- l'adresse exacte du logement concerné ;
+- votre besoin principal : douche sécurisée, accès PMR, remplacement baignoire, barres d'appui ou autre ;
+- si votre projet est toujours d'actualité.
+
+Quel serait le meilleur moment pour vous joindre : plutôt en journée ou en fin d'après-midi ?
+
+Bien cordialement,
+
+Thomas - APCC
+Neuf et rénovation`;
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; color: #172033; line-height: 1.58; font-size: 15px;">
+      <p>Bonjour,</p>
+      <p>
+        Je me permets de revenir vers vous à la suite de votre demande concernant
+        <strong>l'adaptation de votre salle de bain sur ${escapeHtml(sector)}</strong>. 🛁
+      </p>
+      <p>
+        📞 <strong>Nous avons essayé de vous joindre</strong>, car votre projet peut potentiellement entrer dans le cadre de
+        <strong>MaPrimeAdapt'</strong> et des aides mobilisables pour sécuriser votre logement.
+      </p>
+      <h3 style="color: #005997; font-size: 18px; margin: 22px 0 8px;">🔍 L'objectif de notre échange</h3>
+      <p>Un premier appel de quelques minutes nous permettra simplement de :</p>
+      <p style="margin-left: 8px;">
+        ✅ confirmer votre situation et le logement concerné ;<br>
+        ✅ vérifier les premiers critères d'éligibilité ;<br>
+        ✅ comprendre l'aménagement nécessaire dans votre salle de bain ;<br>
+        ✅ convenir, si votre situation le permet, d'un <strong>rendez-vous personnalisé avec APCC</strong>.
+      </p>
+      <p><em>Ce premier échange est entièrement gratuit et sans engagement.</em></p>
+      <h3 style="color: #8a1429; font-size: 18px; margin: 22px 0 8px;">⚠️ Pourquoi faire le point rapidement ?</h3>
+      <p>Les conditions d'éligibilité, les plafonds de revenus et les délais d'instruction peuvent évoluer.</p>
+      <p>
+        Il serait dommage de laisser votre demande sans réponse alors qu'une
+        <strong>solution utile et financée en partie peut peut-être être mise en place pour votre logement</strong>.
+      </p>
+      <h3 style="color: #005997; font-size: 18px; margin: 22px 0 8px;">📅 Comment avancer ?</h3>
+      <p>Vous pouvez me rappeler directement aujourd'hui, ou répondre à ce mail en m'indiquant :</p>
+      <p style="margin-left: 8px;">
+        📞 le meilleur numéro pour vous joindre ;<br>
+        🕐 le créneau horaire qui vous convient ;<br>
+        📍 l'adresse exacte du logement concerné ;<br>
+        🛁 votre besoin principal : douche sécurisée, accès PMR, remplacement baignoire, barres d'appui ou autre ;<br>
+        ✅ si votre projet est toujours d'actualité.
+      </p>
+      <p><strong>Quel serait le meilleur moment pour vous joindre : plutôt en journée ou en fin d'après-midi ?</strong></p>
       <p>Bien cordialement,</p>
       <p><strong>Thomas - APCC</strong><br>Neuf et rénovation</p>
     </div>

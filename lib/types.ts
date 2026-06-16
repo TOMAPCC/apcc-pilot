@@ -9,6 +9,8 @@ export type RoleName =
 
 export type Priority = "Basse" | "Normale" | "Haute" | "Urgente";
 
+export type BusinessLine = "Pompe a chaleur" | "Prime Adapt";
+
 export type ProspectStatus =
   | "Nouveau lead"
   | "A qualifier"
@@ -42,6 +44,7 @@ export type Prospect = {
   city: string;
   department: string;
   source: string;
+  businessLine: BusinessLine;
   assignedTo: string;
   status: ProspectStatus;
   priority: Priority;

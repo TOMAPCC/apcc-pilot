@@ -163,6 +163,7 @@ export function getClubTravauxProspects(): Prospect[] {
     city: lead.city,
     department: lead.postalCode.padStart(5, "0").slice(0, 2),
     source: "ClubTravaux",
+    businessLine: "Pompe a chaleur",
     assignedTo: normalizeAssignedTo(lead.assignedTo),
     status: "Nouveau lead",
     priority: lead.bloctel.toLowerCase().includes("liste") ? "Basse" : "Haute",

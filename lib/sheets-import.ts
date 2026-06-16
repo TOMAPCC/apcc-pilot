@@ -1,6 +1,9 @@
 const DEFAULT_SPREADSHEET_ID = "1dFXhXlD3g7NU8H7HjJJ2V3B4n3GrhUFfWoUpYeVWNzA";
-const DEFAULT_GID = "1926972254";
+const HEAT_PUMP_GID = "1926972254";
+const PRIME_ADAPT_GID = "535542387";
 const START_LEAD_LAST_NAME = "Moktar Mazard";
+
+export type ImportedBusinessLine = "Pompe a chaleur" | "Prime Adapt";
 
 export type ImportedLead = {
   rowNumber: number;
@@ -16,17 +19,17 @@ export type ImportedLead = {
   project: string;
   comment: string;
   source: string;
+  businessLine: ImportedBusinessLine;
   duplicateId?: string;
 };
 
-export function getPublicCsvUrl() {
+export function getPublicCsvUrl(gid = process.env.GOOGLE_SHEETS_DEFAULT_GID || HEAT_PUMP_GID) {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || DEFAULT_SPREADSHEET_ID;
-  const gid = process.env.GOOGLE_SHEETS_DEFAULT_GID || DEFAULT_GID;
   return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
 }
 
 export async function fetchLatestSheetLeads(limit = 25) {
-  const response = await fetch(getPublicCsvUrl(), { cache: "no-store" });
+  const response = await fetch(getPublicCsvUrl(HEAT_PUMP_GID), { cache: "no-store" });
 
   if (!response.ok) {
     throw new Error(`Google Sheets a repondu ${response.status}`);
@@ -44,7 +47,7 @@ export async function fetchLatestSheetLeads(limit = 25) {
     .sort((a, b) => Date.parse(b.entryDate || "1970-01-01") - Date.parse(a.entryDate || "1970-01-01"));
 
   return {
-    sourceUrl: getPublicCsvUrl(),
+    sourceUrl: getPublicCsvUrl(HEAT_PUMP_GID),
     startsFrom: START_LEAD_LAST_NAME,
     totalRows: mappedRows.length,
     latest: mappedRows.slice(0, limit)
@@ -52,8 +55,38 @@ export async function fetchLatestSheetLeads(limit = 25) {
 }
 
 export async function fetchAllSheetLeads() {
-  const result = await fetchLatestSheetLeads(Number.MAX_SAFE_INTEGER);
-  return result.latest;
+  const [heatPumpResult, primeAdaptResult] = await Promise.all([
+    fetchLatestSheetLeads(Number.MAX_SAFE_INTEGER),
+    fetchLatestPrimeAdaptLeads(Number.MAX_SAFE_INTEGER)
+  ]);
+
+  return [...heatPumpResult.latest, ...primeAdaptResult.latest].sort(
+    (a, b) => Date.parse(b.entryDate || "1970-01-01") - Date.parse(a.entryDate || "1970-01-01")
+  );
+}
+
+export async function fetchLatestPrimeAdaptLeads(limit = 25) {
+  const response = await fetch(getPublicCsvUrl(PRIME_ADAPT_GID), { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`Google Sheets Prime Adapt a repondu ${response.status}`);
+  }
+
+  const csv = await response.text();
+  const rows = parseCsv(csv);
+  const [headers = [], ...dataRows] = rows;
+  const mappedRows = markDuplicates(
+    dataRows
+      .map((row, index) => mapPrimeAdaptLead(headers, row, index + 2))
+      .filter((lead) => lead.lastName || lead.firstName || lead.phone || lead.email)
+  ).sort((a, b) => Date.parse(b.entryDate || "1970-01-01") - Date.parse(a.entryDate || "1970-01-01"));
+
+  return {
+    sourceUrl: getPublicCsvUrl(PRIME_ADAPT_GID),
+    startsFrom: "Premier lead Prime Adapt",
+    totalRows: mappedRows.length,
+    latest: mappedRows.slice(0, limit)
+  };
 }
 
 function mapLead(headers: string[], row: string[], rowNumber: number): ImportedLead {
@@ -79,7 +112,42 @@ function mapLead(headers: string[], row: string[], rowNumber: number): ImportedL
     heating: record.chauffage || "",
     project,
     comment,
-    source: "Google Sheets"
+    source: "Google Sheets",
+    businessLine: "Pompe a chaleur"
+  };
+}
+
+function mapPrimeAdaptLead(headers: string[], row: string[], rowNumber: number): ImportedLead {
+  const record = Object.fromEntries(headers.map((header, index) => [normalizeHeader(header), row[index]?.trim() ?? ""]));
+  const { firstName, lastName } = splitFullName(record.nom || "");
+  const age = cleanEligibilityText(record.age || "");
+  const household = record.nombredepersonnesdanslefoyer || "";
+  const income = cleanEligibilityText(record.tranchedurevenufiscal || "");
+  const optIn = record.optin || "";
+  const callDate = record.dateheureappel || "";
+  const comment = [
+    age ? `Profil: ${age}` : "",
+    household ? `Foyer: ${household} personne(s)` : "",
+    income ? `Revenu fiscal: ${income}` : "",
+    optIn ? `Opt-in: ${optIn}` : "",
+    callDate ? `Appel: ${callDate}` : ""
+  ].filter(Boolean).join("\n");
+
+  return {
+    rowNumber,
+    firstName,
+    lastName,
+    postalCode: normalizePostalCode(record.codepostal || ""),
+    phone: normalizePhoneDisplay(record.telephone || ""),
+    email: record.mail || "",
+    entryDate: record.datedulead || "",
+    housing: "Salle de bain a adapter PMR",
+    situation: income,
+    heating: age,
+    project: "Prime Adapt - salle de bain PMR",
+    comment,
+    source: "Google Sheets - Prime Adapt",
+    businessLine: "Prime Adapt"
   };
 }
 
@@ -162,6 +230,20 @@ function normalizeHeader(header: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
+}
+
+function splitFullName(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length <= 1) {
+    return { firstName: "", lastName: parts[0] || "" };
+  }
+
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function cleanEligibilityText(value: string) {
+  return value.replaceAll("_", " ").replaceAll("’", "'").trim();
 }
 
 function normalizePostalCode(value: string) {

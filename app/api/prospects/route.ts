@@ -11,6 +11,7 @@ const prospectSchema = z.object({
   postalCode: z.string().min(4),
   city: z.string().min(1),
   source: z.string().default("Saisie manuelle"),
+  businessLine: z.enum(["Pompe a chaleur", "Prime Adapt"]).default("Pompe a chaleur"),
   estimatedBudget: z.coerce.number().min(0).default(0),
   projectTypes: z.string().optional(),
   comments: z.string().optional()

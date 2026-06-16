@@ -22,7 +22,7 @@ export function importedLeadToProspect(lead: ImportedLead): Prospect {
   const projectType = normalizeProject(lead.project);
 
   return {
-    id: `sheet-${lead.rowNumber}`,
+    id: `${lead.businessLine === "Prime Adapt" ? "sheet-prime-adapt" : "sheet-pac"}-${lead.rowNumber}`,
     civility: "M.",
     firstName: lead.firstName,
     lastName: lead.lastName,
@@ -33,7 +33,8 @@ export function importedLeadToProspect(lead: ImportedLead): Prospect {
     postalCode: lead.postalCode,
     city: inferCityLabel(lead.postalCode),
     department: lead.postalCode.slice(0, 2),
-    source: "Google Sheets",
+    source: lead.source,
+    businessLine: lead.businessLine,
     assignedTo: "A attribuer",
     status,
     priority: inferPriority(lead),
@@ -135,6 +136,10 @@ function inferNextAction(lead: ImportedLead, status: ProspectStatus) {
 }
 
 function normalizeProject(project: string) {
+  if (project.toLowerCase().includes("prime adapt")) {
+    return "Prime Adapt - salle de bain PMR";
+  }
+
   return cleanEligibilityText(project || "Pompe a chaleur").replace("Pompe à chaleur", "Pompe a chaleur");
 }
 
