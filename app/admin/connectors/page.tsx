@@ -10,6 +10,7 @@ type SyncResult = {
   latest?: ImportedLead[];
   totalRows?: number;
   duplicates?: number;
+  startsFrom?: string;
 };
 
 export default function ConnectorsPage() {
@@ -70,7 +71,7 @@ export default function ConnectorsPage() {
           <div className="section-head">
             <h2>Derniers leads Google Sheets</h2>
             <span className="badge blue">
-              {summary?.totalRows ?? latestLeads.length} lignes - {summary?.duplicates ?? 0} doublon(s)
+              Depuis {summary?.startsFrom ?? "Moktar Mazard"} - {summary?.totalRows ?? latestLeads.length} lignes
             </span>
           </div>
           <table className="table">

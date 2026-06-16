@@ -12,7 +12,7 @@ export default async function DashboardPage() {
       <div className="page-title">
         <div>
           <h1>Tableau de bord</h1>
-          <p>Vue operationnelle basee sur le Google Sheet APCC, sans donnees fictives.</p>
+          <p>Vue operationnelle basee sur les nouveaux leads Google Sheet a partir de Moktar Mazard.</p>
         </div>
         <a className="button" href="/prospects/new">Creer un prospect</a>
       </div>
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
           <a className="secondary-button" href="/admin/connectors">Synchroniser</a>
         </div>
         <p className="muted">
-          Les anciens contacts de demonstration ont ete retires. Les prochaines etapes pour un usage quotidien sont
+          Les anciens contacts et les anciennes lignes avant Moktar Mazard sont ignores. Les prochaines etapes pour un usage quotidien sont
           la sauvegarde PostgreSQL des statuts, des relances et des rendez-vous.
         </p>
       </section>

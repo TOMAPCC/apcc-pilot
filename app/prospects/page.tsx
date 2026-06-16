@@ -9,7 +9,7 @@ export default async function ProspectsPage() {
       <div className="page-title">
         <div>
           <h1>Prospects</h1>
-          <p>{prospects.length} leads recuperes depuis le Google Sheet APCC, sans contacts de demonstration.</p>
+          <p>{prospects.length} leads recuperes depuis Moktar Mazard dans le Google Sheet APCC.</p>
         </div>
         <a className="button" href="/prospects/new">Nouveau prospect</a>
       </div>

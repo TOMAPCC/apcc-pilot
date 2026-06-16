@@ -1,5 +1,6 @@
 const DEFAULT_SPREADSHEET_ID = "1dFXhXlD3g7NU8H7HjJJ2V3B4n3GrhUFfWoUpYeVWNzA";
 const DEFAULT_GID = "1926972254";
+const START_LEAD_LAST_NAME = "Moktar Mazard";
 
 export type ImportedLead = {
   rowNumber: number;
@@ -34,14 +35,17 @@ export async function fetchLatestSheetLeads(limit = 25) {
   const csv = await response.text();
   const rows = parseCsv(csv);
   const [headers = [], ...dataRows] = rows;
-  const mappedRows = markDuplicates(dataRows
+  const allRows = dataRows
     .map((row, index) => mapLead(headers, row, index + 2))
     .filter((lead) => lead.lastName || lead.firstName || lead.phone || lead.email)
-    .filter((lead) => !lead.lastName.toLowerCase().includes("nouvelle commnade")))
+    .filter((lead) => !lead.lastName.toLowerCase().includes("nouvelle commnade"));
+  const scopedRows = keepRowsFromLead(allRows, START_LEAD_LAST_NAME);
+  const mappedRows = markDuplicates(scopedRows)
     .sort((a, b) => Date.parse(b.entryDate || "1970-01-01") - Date.parse(a.entryDate || "1970-01-01"));
 
   return {
     sourceUrl: getPublicCsvUrl(),
+    startsFrom: START_LEAD_LAST_NAME,
     totalRows: mappedRows.length,
     latest: mappedRows.slice(0, limit)
   };
@@ -77,6 +81,16 @@ function mapLead(headers: string[], row: string[], rowNumber: number): ImportedL
     comment,
     source: "Google Sheets"
   };
+}
+
+function keepRowsFromLead(leads: ImportedLead[], startLastName: string) {
+  const startIndex = leads.findIndex((lead) => normalizeIdentity(lead.lastName) === normalizeIdentity(startLastName));
+
+  if (startIndex === -1) {
+    return leads;
+  }
+
+  return leads.slice(startIndex);
 }
 
 function markDuplicates(leads: ImportedLead[]) {
