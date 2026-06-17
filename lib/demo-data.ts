@@ -42,9 +42,9 @@ export const connectors: Connector[] = [
     name: "clubtravaux.app",
     type: "API externe",
     status: "Actif",
-    lastSync: "2026-06-16T13:21:00.000Z",
-    importedCount: 7,
-    errors: ["Import manuel depuis Clubtravaux - Export 16-6-2026.xlsx. API officielle a connecter ensuite."]
+    lastSync: "2026-06-17T08:18:00.000Z",
+    importedCount: 9,
+    errors: ["Import manuel depuis Clubtravaux - Export 17-6-2026.xlsx. API officielle a connecter ensuite."]
   },
   {
     id: "c-csv",

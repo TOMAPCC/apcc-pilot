@@ -21,6 +21,42 @@ type ClubTravauxLead = {
 
 const clubTravauxLeads: ClubTravauxLead[] = [
   {
+    projectId: 2055519,
+    trade: "Pompe a chaleur AIR/EAU",
+    date: "16/06/2026",
+    firstName: "Pascal",
+    lastName: "LE SERGENT",
+    address: "nc",
+    postalCode: "34300",
+    city: "Agde",
+    mobile: "0674466318",
+    landline: "0674466318",
+    email: "pascallesergent@orange.fr",
+    comments: "- type de bien : maison\n- statut occupant : acquereur\n- surface : 200 m2\n- annee de construction : 2011_2022\n- chauffage actuel : electrique\n- eau chaude sanitaire : cumulus\n- facture elec : 1300\n- facture bois : 600\n- personnes au foyer : 4\n- revenu fiscal : tres_modeste\n- statut emploi : auto_entrepreneur\n- urgence : dans_6_mois\n- etat projet : renseignement_droits",
+    bloctel: "Non liste",
+    questions: "Delai de realisation : de 3 a 6 mois, Type de bien : maison, Chauffage actuel : gaz de ville, Situation : proprietaire, Quel est votre projet : entretien / reparation / maintenance, Quel est l'age de votre logement ? : plus de 2 ans",
+    status: "Nouveau",
+    assignedTo: "THOMAS CAUQUILL"
+  },
+  {
+    projectId: 2055230,
+    trade: "Pompe a chaleur AIR/EAU",
+    date: "16/06/2026",
+    firstName: "ROGER",
+    lastName: "VALVERDE",
+    address: "N.C",
+    postalCode: "84500",
+    city: "Bollene",
+    mobile: "0612184015",
+    landline: "+33612184015",
+    email: "valverde.roger@orange.fr",
+    comments: "N.C",
+    bloctel: "Non liste",
+    questions: "Type de bien : maison, Chauffage actuel : gaz de ville, Situation : proprietaire, Quel est votre projet : installation neuve, Quel type d'emetteurs avez-vous ? : radiateur, Surface a chauffer : entre 100 et 200m2, Avez vous un jardin ? : oui, Quel est l'age de votre logement ? : plus de 2 ans",
+    status: "Nouveau",
+    assignedTo: "THOMAS CAUQUILL"
+  },
+  {
     projectId: 2054592,
     trade: "Pompe a chaleur AIR/EAU",
     date: "15/06/2026",

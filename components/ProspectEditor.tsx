@@ -109,7 +109,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
         return;
       }
 
-      setSendStatus(response.status === 409 ? "not-configured" : "error");
+      setSendStatus(response.status === 409 || response.status === 502 ? "not-configured" : "error");
     } catch {
       setSendStatus("error");
     } finally {

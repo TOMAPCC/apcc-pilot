@@ -39,33 +39,44 @@ export async function POST(request: Request) {
     );
   }
 
-  const email = buildCloserEmail(payload.data.prospect);
-  const accessToken = await refreshAccessToken();
-  const raw = createRawMessage({
-    from: process.env.GMAIL_FROM_EMAIL!,
-    to: payload.data.prospect.email,
-    subject: email.subject,
-    text: email.text,
-    html: email.html
-  });
+  try {
+    const email = buildCloserEmail(payload.data.prospect);
+    const accessToken = await refreshAccessToken();
+    const raw = createRawMessage({
+      from: process.env.GMAIL_FROM_EMAIL!,
+      to: payload.data.prospect.email,
+      subject: email.subject,
+      text: email.text,
+      html: email.html
+    });
 
-  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ raw })
-  });
+    const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ raw })
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: "Gmail a refuse l'envoi.", detail: await response.text() },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json({ sent: true, result: await response.json() });
+  } catch (error) {
     return NextResponse.json(
-      { error: "Gmail a refuse l'envoi.", detail: await response.text() },
-      { status: response.status }
+      {
+        error: "Connexion Gmail incomplete ou invalide.",
+        detail: error instanceof Error ? error.message : "Erreur inconnue",
+        setup: "Verifie GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN et GMAIL_FROM_EMAIL dans Vercel."
+      },
+      { status: 502 }
     );
   }
-
-  return NextResponse.json({ sent: true, result: await response.json() });
 }
 
 async function refreshAccessToken() {
