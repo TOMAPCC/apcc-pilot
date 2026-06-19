@@ -1,6 +1,10 @@
 import { AppShell } from "@/components/AppShell";
 import { ProspectWorkspace } from "@/components/ProspectWorkspace";
+import { SyncSheetsButton } from "@/components/SyncSheetsButton";
 import { getCrmProspects } from "@/lib/sheet-prospects";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ProspectsPage({
   searchParams
@@ -15,7 +19,10 @@ export default async function ProspectsPage({
           <h1>Prospects</h1>
           <p>{prospects.length} leads recuperes depuis Google Sheets et ClubTravaux.</p>
         </div>
-        <a className="button" href="/prospects/new">Nouveau prospect</a>
+        <div className="page-actions">
+          <SyncSheetsButton />
+          <a className="button" href="/prospects/new">Nouveau prospect</a>
+        </div>
       </div>
 
       <ProspectWorkspace prospects={prospects} initialQuery={params?.q ?? ""} />

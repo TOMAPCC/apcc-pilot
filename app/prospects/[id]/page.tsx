@@ -3,6 +3,9 @@ import { AppShell } from "@/components/AppShell";
 import { ProspectEditor } from "@/components/ProspectEditor";
 import { getCrmProspects } from "@/lib/sheet-prospects";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function ProspectDetailPage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
   const { id } = await params;
   const prospects = await getCrmProspects();

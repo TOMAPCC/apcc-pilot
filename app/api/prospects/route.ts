@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findPotentialDuplicate } from "@/lib/crm";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const prospectSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),

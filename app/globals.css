@@ -161,6 +161,12 @@ textarea {
   margin-bottom: 20px;
 }
 
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .page-title h1 {
   margin: 0 0 6px;
   font-size: 28px;

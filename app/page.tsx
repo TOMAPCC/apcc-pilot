@@ -2,6 +2,9 @@ import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { getCrmProspects, getSheetDashboardMetrics } from "@/lib/sheet-prospects";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function DashboardPage() {
   const prospects = await getCrmProspects();
   const metrics = getSheetDashboardMetrics(prospects);
