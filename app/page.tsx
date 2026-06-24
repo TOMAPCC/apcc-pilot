@@ -27,7 +27,7 @@ export default async function DashboardPage() {
         <MetricCard label="Pompes a chaleur" value={heatPumpCount} hint="Google Sheets + ClubTravaux" />
         <MetricCard label="Prime Adapt" value={primeAdaptCount} hint="Salles de bain PMR" />
         <MetricCard label="A contacter" value={metrics.toContact} hint="Relance telephone/e-mail" />
-        <MetricCard label="ClubTravaux" value={clubTravauxCount} hint="Export du 17/06/2026" />
+        <MetricCard label="ClubTravaux" value={clubTravauxCount} hint="Export du 24/06/2026" />
       </section>
 
       <section className="grid cols-3" style={{ marginTop: 16 }}>
