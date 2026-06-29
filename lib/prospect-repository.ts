@@ -76,7 +76,6 @@ export function isDatabaseConfigured() {
 
 export async function getPersistentCrmProspects() {
   await ensureDefaultCampaign();
-  await syncExternalProspectsIfDue();
   const prospects = await prisma.prospect.findMany({
     include: {
       addresses: true,
