@@ -75,6 +75,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
 
   function update<K extends keyof ProspectDraft>(key: K, value: ProspectDraft[K]) {
     setSaved(false);
+    setSaveMessage("");
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
@@ -115,6 +116,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   const closerMail = useMemo(() => buildCloserEmail(draft), [draft]);
   const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(draft.email)}&su=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.text)}`;
   const mailtoHref = `mailto:${draft.email}?subject=${encodeURIComponent(closerMail.subject)}&body=${encodeURIComponent(closerMail.text)}`;
+  const isClient = draft.status === "Dossier signe" || Boolean(draft.clientNumber);
 
   function toggleNoAnswer(checked: boolean) {
     setSaved(false);
@@ -205,6 +207,18 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
     }
   }
 
+  function validateAsClient() {
+    setSaved(false);
+    setDraft((current) => ({
+      ...current,
+      status: "Dossier signe",
+      priority: "Haute",
+      nextAction: "Ouvrir le dossier client et classer les documents",
+      nextFollowUp: new Date().toISOString()
+    }));
+    setSaveMessage("Statut pret: clique sur Enregistrer pour creer le dossier client.");
+  }
+
   return (
     <div className="detail-layout">
       <section className="identity-panel">
@@ -229,7 +243,8 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
           <h2>Fiche prospect editable</h2>
           <button className="button" onClick={save} disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</button>
         </div>
-        {saved ? <p className="toast">{saveMessage || buildSaveMessage(draft)}</p> : null}
+        {saveMessage ? <p className="toast">{saveMessage}</p> : null}
+        {saved && !saveMessage ? <p className="toast">{buildSaveMessage(draft)}</p> : null}
 
         <div className="form-grid">
           <div className="field"><label>Prenom</label><input value={draft.firstName} onChange={(event) => update("firstName", event.target.value)} /></div>
@@ -292,6 +307,21 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
           </div>
         ) : null}
 
+        <div className={isClient ? "qualification-panel client" : "qualification-panel"}>
+          <span className="eyebrow">Validation client</span>
+          <div className="client-validation-row">
+            <div>
+              <h3>{isClient ? "Dossier client actif" : "Prospect non valide client"}</h3>
+              <p className="muted">
+                {isClient
+                  ? `Numero client: ${draft.clientNumber ?? "cree apres enregistrement"}`
+                  : "Le depot de documents et le suivi dossier sont disponibles apres validation client."}
+              </p>
+            </div>
+            {!isClient ? <button className="button" type="button" onClick={validateAsClient}>Valider en client</button> : null}
+          </div>
+        </div>
+
         <div className="field" style={{ marginTop: 14 }}>
           <label>Commentaires, questions et contexte</label>
           <textarea value={draft.comments} onChange={(event) => update("comments", event.target.value)} />
@@ -341,46 +371,55 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
         {sendStatus === "error" ? <p className="toast warning">L&apos;envoi Gmail a echoue. Verifie la connexion Gmail ou utilise le bouton Ouvrir dans Gmail.</p> : null}
       </section>
 
-      <section className="documents-panel">
+      <section className={isClient ? "documents-panel" : "documents-panel locked"}>
         <div className="section-head">
           <div>
             <span className="eyebrow">Classement</span>
-            <h2>Documents du prospect</h2>
+            <h2>Dossier documents client</h2>
           </div>
-          <span className="badge blue">{documents.length} fichier(s)</span>
+          <span className={isClient ? "badge blue" : "badge"}>{isClient ? `${documents.length} fichier(s)` : "Verrouille"}</span>
         </div>
 
-        <div className="document-dropzone">
-          <div className="field">
-            <label>Classement</label>
-            <select value={documentCategory} onChange={(event) => setDocumentCategory(event.target.value)}>
-              {documentCategories.map((category) => <option key={category}>{category}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>Depot de fichier</label>
-            <input
-              type="file"
-              onChange={(event) => uploadDocument(event.target.files?.[0])}
-              disabled={uploadingDocument}
-            />
-          </div>
-        </div>
+        {isClient ? (
+          <>
+            <div className="document-dropzone">
+              <div className="field">
+                <label>Classement</label>
+                <select value={documentCategory} onChange={(event) => setDocumentCategory(event.target.value)}>
+                  {documentCategories.map((category) => <option key={category}>{category}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Depot de fichier</label>
+                <input
+                  type="file"
+                  onChange={(event) => uploadDocument(event.target.files?.[0])}
+                  disabled={uploadingDocument}
+                />
+              </div>
+            </div>
 
-        {documentMessage ? <p className="toast">{documentMessage}</p> : null}
+            {documentMessage ? <p className="toast">{documentMessage}</p> : null}
 
-        <div className="document-list">
-          {documents.map((document) => (
-            <a className="document-row" href={document.url} download={document.name} key={document.id}>
-              <span>
-                <strong>{document.name}</strong>
-                <small>{document.category} - {formatFileSize(document.size)} - {new Date(document.createdAt).toLocaleDateString("fr-FR")}</small>
-              </span>
-              <em>Telecharger</em>
-            </a>
-          ))}
-          {!documents.length ? <p className="muted">Aucun document classe pour ce prospect.</p> : null}
-        </div>
+            <div className="document-list">
+              {documents.map((document) => (
+                <a className="document-row" href={document.url} download={document.name} key={document.id}>
+                  <span>
+                    <strong>{document.name}</strong>
+                    <small>{document.category} - {formatFileSize(document.size)} - {new Date(document.createdAt).toLocaleDateString("fr-FR")}</small>
+                  </span>
+                  <em>Telecharger</em>
+                </a>
+              ))}
+              {!documents.length ? <p className="muted">Aucun document classe pour ce dossier client.</p> : null}
+            </div>
+          </>
+        ) : (
+          <div className="document-locked-state">
+            <strong>Le classement documentaire commence au moment ou le prospect devient client.</strong>
+            <p>Valide le client depuis la fiche, enregistre, puis tu pourras classer devis, factures, pieces client, aides et documents administratifs.</p>
+          </div>
+        )}
       </section>
 
       <section className="timeline-panel">

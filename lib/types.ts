@@ -60,6 +60,7 @@ export type Prospect = {
   createdAt: string;
   updatedAt: string;
   comments: string;
+  clientNumber?: string;
 };
 
 export type PipelineStage = {
@@ -96,6 +97,22 @@ export type ProspectDocument = {
   mimeType: string;
   size: number;
   url: string;
+  createdAt: string;
+};
+
+export type ClientSummary = {
+  id: string;
+  number: string;
+  prospectId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  projectTypes: string[];
+  documentsCount: number;
   createdAt: string;
 };
 

@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { getClubTravauxProspects } from "./clubtravaux-leads";
 import { getSheetProspects } from "./sheet-prospects";
-import type { Appointment, BusinessLine, Priority, Prospect, ProspectDocument, ProspectStatus } from "./types";
+import type { Appointment, BusinessLine, ClientSummary, Priority, Prospect, ProspectDocument, ProspectStatus } from "./types";
 
 const SYNC_TTL_MS = 5 * 60 * 1000;
 
@@ -17,6 +17,7 @@ type ProspectWithRelations = Prisma.ProspectGetPayload<{
     projects: true;
     source: true;
     appointments: true;
+    client: true;
   };
 }>;
 
@@ -68,7 +69,8 @@ export async function getPersistentCrmProspects() {
       property: true,
       projects: true,
       source: true,
-      appointments: true
+      appointments: true,
+      client: true
     },
     orderBy: { createdAt: "desc" }
   });
@@ -91,6 +93,41 @@ export async function getPersistentAppointments(): Promise<Appointment[]> {
     address: appointment.address ?? "",
     template: appointment.template ?? "Rendez-vous APCC"
   }));
+}
+
+export async function getPersistentClients(): Promise<ClientSummary[]> {
+  const clients = await prisma.client.findMany({
+    include: {
+      prospect: { include: { projects: true } },
+      addresses: true,
+      projects: true,
+      documents: true
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  return clients.map((client) => {
+    const address = client.addresses[0];
+    const projectTypes = client.projects.length
+      ? client.projects.map((project) => project.type)
+      : client.prospect?.projects.map((project) => project.type) ?? [];
+
+    return {
+      id: client.id,
+      number: client.number,
+      prospectId: client.prospectId ?? undefined,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      email: client.email ?? "",
+      phone: client.phone ?? "",
+      address: address?.line1 ?? "",
+      postalCode: address?.postalCode ?? "",
+      city: address?.city ?? "",
+      projectTypes,
+      documentsCount: client.documents.length,
+      createdAt: client.createdAt.toISOString()
+    };
+  });
 }
 
 export async function syncExternalProspectsIfDue(force = false) {
@@ -162,7 +199,8 @@ export async function updatePersistentProspect(id: string, input: ProspectUpdate
       property: true,
       projects: true,
       source: true,
-      appointments: true
+      appointments: true,
+      client: true
     }
   });
 
@@ -187,7 +225,8 @@ export async function findPersistentDuplicate(input: Pick<Prospect, "phone" | "e
       property: true,
       projects: true,
       source: true,
-      appointments: true
+      appointments: true,
+      client: true
     }
   });
 
@@ -202,8 +241,11 @@ export async function findPersistentDuplicate(input: Pick<Prospect, "phone" | "e
 }
 
 export async function getProspectDocuments(prospectId: string): Promise<ProspectDocument[]> {
+  const client = await prisma.client.findUnique({ where: { prospectId } });
+  if (!client) return [];
+
   const documents = await prisma.document.findMany({
-    where: { prospectId },
+    where: { clientId: client.id },
     orderBy: { createdAt: "desc" }
   });
 
@@ -218,9 +260,15 @@ export async function createProspectDocument(input: {
   size: number;
   dataUrl: string;
 }) {
+  const client = await prisma.client.findUnique({ where: { prospectId: input.prospectId } });
+
+  if (!client) {
+    throw new Error("Le prospect doit d'abord etre valide en client avant de classer des documents.");
+  }
+
   const document = await prisma.document.create({
     data: {
-      prospectId: input.prospectId,
+      clientId: client.id,
       name: `${input.category} - ${input.name}`,
       path: input.dataUrl,
       mimeType: `${input.mimeType};size=${input.size}`
@@ -280,7 +328,8 @@ async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInp
       property: true,
       projects: true,
       source: true,
-      appointments: true
+      appointments: true,
+      client: true
     }
   });
 
@@ -293,7 +342,8 @@ async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInp
       property: true,
       projects: true,
       source: true,
-      appointments: true
+      appointments: true,
+      client: true
     }
   });
 
@@ -361,6 +411,7 @@ async function replaceProspectDetails(prospectId: string, prospect: Prospect, up
   });
 
   await syncAppointmentFromProspect(prospectId, prospect, updateInput);
+  await syncClientFromProspect(prospectId, prospect);
 }
 
 async function syncAppointmentFromProspect(prospectId: string, prospect: Prospect, updateInput: ProspectUpdateInput) {
@@ -391,6 +442,59 @@ async function syncAppointmentFromProspect(prospectId: string, prospect: Prospec
       address
     }
   });
+}
+
+async function syncClientFromProspect(prospectId: string, prospect: Prospect) {
+  if (prospect.status !== "Dossier signe") {
+    return;
+  }
+
+  const client = await prisma.client.upsert({
+    where: { prospectId },
+    create: {
+      number: prospect.clientNumber ?? buildClientNumber(prospectId),
+      prospectId,
+      firstName: prospect.firstName,
+      lastName: prospect.lastName,
+      email: prospect.email,
+      phone: prospect.phone
+    },
+    update: {
+      firstName: prospect.firstName,
+      lastName: prospect.lastName,
+      email: prospect.email,
+      phone: prospect.phone
+    }
+  });
+
+  await prisma.address.deleteMany({ where: { clientId: client.id } });
+
+  const line1 = prospect.worksiteAddress || prospect.address;
+  if (line1) {
+    await prisma.address.create({
+      data: {
+        clientId: client.id,
+        label: "Adresse client",
+        line1,
+        postalCode: prospect.postalCode,
+        city: prospect.city,
+        department: prospect.department
+      }
+    });
+  }
+
+  await prisma.project.deleteMany({ where: { clientId: client.id } });
+  await Promise.all(
+    prospect.projectTypes.map((type) =>
+      prisma.project.create({
+        data: {
+          clientId: client.id,
+          type,
+          description: prospect.businessLine
+        }
+      })
+    )
+  );
 }
 
 function databaseProspectToProspect(prospect: ProspectWithRelations): Prospect {
@@ -428,7 +532,8 @@ function databaseProspectToProspect(prospect: ProspectWithRelations): Prospect {
     maprimeCategory: prospect.property?.maprimeCategory ?? undefined,
     createdAt: prospect.createdAt.toISOString(),
     updatedAt: prospect.updatedAt.toISOString(),
-    comments: prospect.comments ?? ""
+    comments: prospect.comments ?? "",
+    clientNumber: prospect.client?.number ?? undefined
   };
 }
 
@@ -469,6 +574,11 @@ function tomorrowAtNine() {
 
 function normalize(value: string | undefined) {
   return (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function buildClientNumber(prospectId: string) {
+  const suffix = normalize(prospectId).slice(-6).toUpperCase().padStart(6, "0");
+  return `APCC-${new Date().getFullYear()}-${suffix}`;
 }
 
 function databaseDocumentToDocument(document: {

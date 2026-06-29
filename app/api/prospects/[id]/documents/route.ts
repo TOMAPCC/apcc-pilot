@@ -40,10 +40,18 @@ export async function POST(request: Request, { params }: Readonly<{ params: Prom
     return NextResponse.json({ message: "Fichier invalide ou trop volumineux.", errors: payload.error.flatten() }, { status: 400 });
   }
 
-  const document = await createProspectDocument({
-    prospectId: id,
-    ...payload.data
-  });
+  let document;
+  try {
+    document = await createProspectDocument({
+      prospectId: id,
+      ...payload.data
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { message: error instanceof Error ? error.message : "Impossible de classer ce document." },
+      { status: 409 }
+    );
+  }
 
   return NextResponse.json({
     status: "created",

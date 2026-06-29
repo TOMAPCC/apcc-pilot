@@ -1,8 +1,10 @@
 import Link from "next/link";
+import type { Route } from "next";
 
 const nav = [
   ["Tableau de bord", "/"],
   ["Prospects", "/prospects"],
+  ["Clients", "/clients"],
   ["Pipeline", "/pipeline"],
   ["Taches", "/tasks"],
   ["Rendez-vous", "/appointments"],
@@ -22,7 +24,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
         </Link>
         <nav className="nav" aria-label="Navigation principale">
           {nav.map(([label, href]) => (
-            <Link href={href} key={href}>
+            <Link href={href as Route} key={href}>
               {label}
             </Link>
           ))}

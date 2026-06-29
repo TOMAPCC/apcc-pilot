@@ -768,6 +768,45 @@ textarea {
   border-color: #fed7aa;
 }
 
+.qualification-panel.client {
+  background: #f1f8e8;
+  border-color: #cde7b0;
+}
+
+.client-validation-row {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.client-validation-row h3 {
+  color: var(--apcc-navy);
+  margin: 6px 0 4px;
+}
+
+.documents-panel.locked {
+  background: #f8fafc;
+}
+
+.document-locked-state {
+  background: white;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.document-locked-state strong {
+  color: var(--apcc-navy);
+}
+
+.document-locked-state p {
+  color: var(--muted);
+  margin: 0;
+}
+
 .empty-state {
   align-items: start;
   background: white;
