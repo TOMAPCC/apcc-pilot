@@ -9,9 +9,16 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/smoke-test.mjs",
+    "test": "node scripts/smoke-test.mjs && node scripts/coproscan-tests.mjs",
+    "test:coproscan": "node scripts/coproscan-tests.mjs",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:generate": "prisma generate"
+    "db:migrate:dev": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "coproscan:purge-demo": "node -e \"require('./lib/coproscan/rgpd').purgeAllDemoData().then(console.log)\"",
+    "coproscan:import-rnic": "node -e \"require('./lib/coproscan/rnic-importer').importAllTargetDepartments().then(r=>console.log(JSON.stringify(r,null,2)))\"",
+    "deploy:up": "docker compose up --build -d",
+    "deploy:migrate": "docker compose exec app npx prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

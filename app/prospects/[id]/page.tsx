@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { AppShell } from "@/components/AppShell";
 import { ProspectEditor } from "@/components/ProspectEditor";
 import { getCrmProspects } from "@/lib/sheet-prospects";
+import type { Prospect } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,7 +16,7 @@ export default async function ProspectDetailPage({
   const { id } = await params;
   const query = await searchParams;
   const backHref = query?.from?.startsWith("/prospects") ? query.from : "/prospects";
-  const prospects = await getCrmProspects();
+  const prospects = await getCrmProspects() as Prospect[];
   const prospect = prospects.find((item) => item.id === id);
 
   if (!prospect) {

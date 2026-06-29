@@ -1,13 +1,14 @@
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { getCrmProspects, getSheetDashboardMetrics } from "@/lib/sheet-prospects";
+import type { Prospect } from "@/lib/types";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const prospects = await getCrmProspects();
+  const prospects = await getCrmProspects() as Prospect[];
   const metrics = getSheetDashboardMetrics(prospects);
   const latestProspects = prospects.slice(0, 8);
   const clubTravauxCount = prospects.filter((prospect) => prospect.source === "ClubTravaux").length;
