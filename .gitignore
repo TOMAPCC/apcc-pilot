@@ -8,3 +8,4 @@ coverage
 uploads
 tsconfig.tsbuildinfo
 .vercel
+.env*
