@@ -1,284 +1,139 @@
 # Roadmap APCC Pilot V2
 
-Objectif : transformer APCC Pilot en systeme metier complet sans recreer l'application, sans casser les routes existantes et sans supprimer les donnees actuelles.
+## Vision
 
-## Principes de migration
+Transformer APCC Pilot en logiciel metier quotidien pour APCC Neuf et Renovation: cockpit commercial, campagnes, communications, devis, administratif, documents, chantiers, facturation, SAV, rapports et IA.
 
-1. Ne jamais modifier une migration deja executee.
-2. Creer uniquement des migrations additives.
-3. Preserver les routes existantes.
-4. Garder Google Sheets et ClubTravaux comme sources d'import pendant la transition.
-5. Introduire PostgreSQL comme source de verite progressivement.
-6. Garder le mode brouillon par defaut pour Gmail.
-7. Ne pas stocker de secret dans le code.
-8. Ne pas ajouter de bouton factice : chaque action visible doit avoir un effet clair ou etre marquee simulation.
-9. Tester lint/typecheck/test/build avant livraison.
-10. Pas de deploiement sans validation.
+## Phase 1 - Socle et Experience Utilisateur
 
-## Phase 0 - Stabilisation technique
+Objectif: rendre l'application claire, navigable et structurante avant d'empiler les modules.
 
-Fichiers probables :
+Livrables:
+- PWA installable;
+- navigation applicative complete;
+- sidebar repliable;
+- topbar permanente;
+- palette Ctrl/Cmd+K;
+- campagne active;
+- cockpit;
+- page Ma journee;
+- files de travail;
+- pipeline simplifie en 8 etapes;
+- sous-statuts;
+- workflow perdu;
+- migrations Phase 1;
+- backfill campagne historique.
 
-- `package.json`
-- config ESLint a creer
-- `lib/db.ts`
-- `prisma/schema.prisma`
-- nouvelle migration Prisma
-- scripts d'import initial
+Risques:
+- migration des statuts existants;
+- conservation des filtres actuels;
+- ne pas casser la synchronisation Google Sheets/ClubTravaux;
+- ne pas perdre les documents clients deja crees.
 
-Objectifs :
+## Phase 2 - Appels et Communications
 
-- corriger `npm run lint` pour un lint non interactif ;
-- ajouter une base PostgreSQL production ;
-- creer Prisma Client singleton ;
-- ajouter un premier seed/import serveur ;
-- proteger les routes sensibles par une auth minimale ;
-- documenter les variables d'environnement.
+Livrables:
+- module appels;
+- resultat d'appel;
+- journal d'activite;
+- adaptateur telephonie;
+- WhatsApp provider abstrait;
+- SMS provider abstrait;
+- boite Communications;
+- modele non repondu;
+- sequences sans reponse;
+- consentement et STOP.
 
-Risques :
+Mode par defaut: validation humaine.
 
-- duplication de leads si l'import n'a pas de cle externe stable ;
-- perte des edits locaux si non migres ;
-- changement de source de verite trop brutal.
+## Phase 3 - Campagnes et Statistiques
 
-Validation :
+Livrables:
+- cockpit campagne;
+- KPIs cliquables;
+- filtres globaux;
+- graphiques interactifs;
+- rapports;
+- exports Excel;
+- rapports PDF direction.
 
-- lint OK ;
-- tests OK ;
-- typecheck OK ;
-- build OK ;
-- import idempotent des leads.
+## Phase 4 - Documents et Administratif
 
-## Phase 1 - GED et dossier unifie
+Livrables:
+- stockage prive;
+- arborescences PAC / renovation / copropriete;
+- versions;
+- apercus;
+- checklists MaPrimeRenov, CEE, financement;
+- demandes de documents;
+- portail de depot securise.
 
-Fichiers/modules probables :
+## Phase 5 - Devis et Facturation
 
-- `prisma/schema.prisma`
-- migration `0002_business_file_documents`
-- `app/files/[id]/page.tsx` ou `app/dossiers/[id]/page.tsx`
-- `components/BusinessFileHeader.tsx`
-- `components/BusinessFileTabs.tsx`
-- `components/DocumentsWorkspace.tsx`
-- `app/api/documents/*`
-- `lib/storage/*`
-- `lib/permissions/*`
+Livrables:
+- devis;
+- versions;
+- relances;
+- signature future;
+- acompte;
+- factures;
+- reglements;
+- alertes echeances.
 
-Migrations :
+## Phase 6 - Chantiers
 
-- `BusinessFile`
-- `ExternalLead`
-- `DocumentFolderTemplate`
-- `DocumentFolderTemplateItem`
-- `DocumentFolder`
-- `Document`
-- `DocumentVersion`
-- `DocumentTag`
-- `DocumentShareLink`
-- `DocumentRequest`
-- `DocumentRequestItem`
-- `DocumentAccessLog`
-- renforcement `AuditLog`
-
-Fonctions livrables :
-
-- page dossier unifie avec onglets ;
-- en-tete dossier ;
-- arborescence documentaire ;
-- upload multi-fichiers ;
-- stockage prive ;
-- preview PDF/image ;
-- download securise ;
-- journal d'activite ;
-- modeles d'arborescences initiaux PAC, Climatisation, Renovation, Copropriete.
-
-Risques :
-
-- securite fichiers ;
-- permissions serveur ;
-- URLs publiques permanentes interdites ;
-- volume de stockage ;
-- migration des documents futurs.
-
-Decision stockage recommandee :
-
-- Vercel Blob prive si l'equipe veut rester sur Vercel.
-- Supabase Storage si la base est Supabase.
-- S3 compatible si besoin d'une politique plus industrielle.
-
-## Phase 2 - Administratif et aides
-
-Migrations :
-
-- `AdministrativeCase`
-- `AdministrativeChecklistTemplate`
-- `AdministrativeChecklistItem`
-- `AdministrativeDocumentRequirement`
-- `GrantApplication` a relier et etendre
-- `GrantStatusHistory`
-- `HouseholdMember`
-- `MissingDocumentRequest`
-
-Livrables :
-
-- checklist par type de dossier ;
-- pieces nominatives par membre du foyer ;
-- statut des pieces ;
-- taux de completude ;
-- bouton "Demander les pieces manquantes" en mode brouillon ;
-- lien depot client securise.
-
-Risques :
-
-- ne pas generer de faux formulaires officiels ;
-- distinction stricte notes internes / portail client ;
-- relances uniquement sur pieces manquantes.
-
-## Phase 3 - Gmail et relances
-
-Migrations :
-
-- `EmailTemplate`
-- `EmailSequence`
-- `EmailSequenceStep`
-- `EmailSequenceEnrollment`
-- `EmailEvent`
-- `EmailAttachment`
-- `EmailSyncState`
-
-Livrables :
-
-- mode brouillon par defaut ;
-- creation de brouillons Gmail ;
-- envoi manuel valide ;
-- stockage des emails dans le dossier ;
-- pieces jointes depuis documents ;
-- sequences devis/documents/signature/acompte ;
-- arret automatique sur reponse, signature, RDV, dossier perdu.
-
-Risques :
-
-- delivrabilite Gmail ;
-- doublons de relance ;
-- consentement/opposition ;
-- quota Gmail.
-
-## Phase 4 - Devis et facturation
-
-Migrations :
-
-- `Quote` a etendre ;
-- `QuoteVersion` a etendre ;
-- `QuoteLine`
-- `QuoteDocument`
-- `QuoteEvent`
-- `QuoteSignature`
-- `Invoice` a etendre ;
-- `InvoiceLine`
-- `PaymentSchedule`
-- `CreditNote`
-- `PaymentReminder`
-
-Livrables :
-
-- plusieurs propositions par projet ;
-- statut devis ;
-- PDF associe ;
-- suivi envoi/vue/signature ;
-- acompte ;
-- factures et paiements ;
-- alertes solde/retard.
-
-Risques :
-
-- numerotation facture irreversible ;
-- ne pas faire une comptabilite complete ;
-- futures integrations comptables.
-
-## Phase 5 - Chantiers
-
-Migrations :
-
-- extension `Worksite`
-- extension `WorksitePhase`
-- `WorksiteTask`
-- `WorksitePlanningItem`
-- `WorksiteTeam`
-- `WorksiteVehicle`
-- extension photos et reserves
-
-Livrables :
-
-- creation chantier apres signature ;
-- phases chantier ;
-- planning semaine/mois ;
-- photos mobile par categorie ;
-- compte rendu ;
-- reception/reserves ;
+Livrables:
+- creation automatique chantier apres signature;
+- planning;
+- phases;
+- photos mobiles;
+- comptes rendus;
+- reception;
+- reserves;
+- garanties;
 - SAV.
 
-Risques :
+## Phase 7 - Coproprietes B2B
 
-- UX mobile chantier ;
-- droits sous-traitants ;
-- stockage photos ;
-- hors connexion a differer.
+Livrables:
+- syndics;
+- gestionnaires;
+- coproprietes;
+- chaufferies;
+- pipeline B2B;
+- campagnes B2B;
+- rapports.
 
-## Phase 6 - Coproprietes B2B
+## Phase 8 - IA et Automatisations
 
-Migrations :
+Livrables:
+- APCC Copilot;
+- suggestions;
+- rapports;
+- actions confirmees;
+- audit des actions IA;
+- workflows avances.
 
-- `Company`
-- `ProfessionalContact`
-- `PropertyManager`
-- `Condominium`
-- `Building`
-- `BuildingEntrance`
-- `HeatingPlant`
-- `CondominiumOpportunity`
-- `CondominiumCampaign`
-- `GeneralMeeting`
-- `SyndicateCouncil`
-- `EnergyStudy`
-- `ProspectingAction`
+## Regles de Livraison
 
-Livrables :
+Pour chaque phase:
+- branche dediee;
+- migrations explicites;
+- lint;
+- typecheck;
+- tests;
+- build production;
+- preview Vercel;
+- validation utilisateur;
+- production seulement apres validation.
 
-- module B2B separe ;
-- pipeline coproprietes ;
-- syndics et contacts ;
-- batiments/chaufferies ;
-- campagnes ;
-- statistiques B2B ;
-- cartographie si bibliotheque retenue.
+## Prochaine Implementation Recommandee
 
-Risques :
-
-- modelisation relationnelle plus complexe ;
-- RGPD/prospection ;
-- qualite et source des donnees ;
-- historique des changements.
-
-## Ordre conseille des prochains commits
-
-1. Corriger lint et ajouter config ESLint.
-2. Ajouter `DATABASE_URL` production et Prisma Client.
-3. Creer migration Phase 1 additive.
-4. Importer les leads actuels en table persistante.
-5. Ajouter auth minimale.
-6. Creer `BusinessFile` et page dossier en lecture seule.
-7. Ajouter stockage prive et upload GED.
-8. Ajouter templates d'arborescences.
-9. Ajouter journal d'activite.
-
-## Definition of Done Phase 1
-
-- Les leads existants sont preserves.
-- Les fiches prospects existantes restent accessibles.
-- Chaque prospect peut ouvrir un dossier unifie.
-- Les documents sont stockes en prive.
-- Les fichiers sont references en base.
-- Les uploads/downloads sont controles cote serveur.
-- Les actions documentaires sont journalisees.
-- Les permissions serveur existent au minimum pour Thomas.
-- `npm run lint`, `npm run test`, `npm run typecheck`, `npm run build` passent.
-
+Demarrer Phase 1 par:
+1. migration `0002_phase1_foundation`;
+2. campagne historique active;
+3. mapping pipeline simplifie;
+4. navigation metier complete;
+5. PWA;
+6. page `Ma journee`;
+7. files de travail calculees.
