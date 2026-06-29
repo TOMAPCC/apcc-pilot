@@ -1,7 +1,9 @@
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { getCrmProspects, getSheetDashboardMetrics } from "@/lib/sheet-prospects";
+import { buildWorkQueues } from "@/lib/work-queues";
 import Link from "next/link";
+import type { Route } from "next";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,6 +12,9 @@ export default async function DashboardPage() {
   const prospects = await getCrmProspects();
   const metrics = getSheetDashboardMetrics(prospects);
   const latestProspects = prospects.slice(0, 8);
+  const queues = buildWorkQueues(prospects);
+  const todayQueue = queues.find((queue) => queue.id === "today");
+  const overdueQueue = queues.find((queue) => queue.id === "overdue");
   const clubTravauxCount = prospects.filter((prospect) => prospect.source === "ClubTravaux").length;
   const heatPumpCount = prospects.filter((prospect) => prospect.businessLine === "Pompe a chaleur").length;
   const primeAdaptCount = prospects.filter((prospect) => prospect.businessLine === "Prime Adapt").length;
@@ -18,17 +23,20 @@ export default async function DashboardPage() {
     <AppShell>
       <div className="page-title">
         <div>
-          <h1>Tableau de bord</h1>
-          <p>Vue operationnelle basee sur Google Sheets et ClubTravaux.</p>
+          <h1>Cockpit APCC</h1>
+          <p>Vue operationnelle CRM: leads, relances, rendez-vous, clients et sources entrantes.</p>
         </div>
-        <Link className="button" href="/prospects/new">Creer un prospect</Link>
+        <div className="page-actions">
+          <Link className="secondary-button" href={"/day" as Route}>Ouvrir ma journee</Link>
+          <Link className="button" href="/prospects/new">Creer un prospect</Link>
+        </div>
       </div>
 
       <section className="grid cols-4">
         <MetricCard label="Pompes a chaleur" value={heatPumpCount} hint="Google Sheets + ClubTravaux" />
         <MetricCard label="Prime Adapt" value={primeAdaptCount} hint="Salles de bain PMR" />
-        <MetricCard label="A contacter" value={metrics.toContact} hint="Relance telephone/e-mail" />
-        <MetricCard label="ClubTravaux" value={clubTravauxCount} hint="Export du 24/06/2026" />
+        <MetricCard label="A traiter aujourd'hui" value={todayQueue?.count ?? 0} hint="Relance telephone/e-mail" />
+        <MetricCard label="En retard" value={overdueQueue?.count ?? 0} hint={`${clubTravauxCount} ClubTravaux importes`} />
       </section>
 
       <section className="grid cols-3" style={{ marginTop: 16 }}>
@@ -85,13 +93,12 @@ export default async function DashboardPage() {
 
       <section className="panel" style={{ marginTop: 16 }}>
         <div className="section-head">
-          <h2>Toutes les donnees viennent du Google Sheet</h2>
+          <h2>Sources et synchronisation</h2>
           <a className="secondary-button" href="/admin/connectors">Synchroniser</a>
         </div>
         <p className="muted">
-          Les anciennes lignes pompe a chaleur avant Moktar Mazard sont ignorees. Les leads Prime Adapt du second onglet Google Sheet sont ajoutes dans une activite separee.
-          Les leads ClubTravaux du fichier exporte sont ajoutes. Les prochaines etapes pour un usage quotidien sont
-          la sauvegarde PostgreSQL des statuts, des relances et des rendez-vous.
+          Les leads Google Sheets, Prime Adapt et ClubTravaux alimentent PostgreSQL. Les changements de statut creent maintenant une trajectoire claire:
+          pipeline, rendez-vous, dossier client et classement documentaire apres validation client.
         </p>
       </section>
     </AppShell>

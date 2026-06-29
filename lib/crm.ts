@@ -8,7 +8,7 @@ export function getDashboardMetrics() {
     .filter((prospect) => prospect.status !== "Dossier perdu")
     .reduce((sum, prospect) => sum + prospect.estimatedBudget, 0);
   const weightedPipeline = prospects.reduce((sum, prospect) => {
-    const stage = pipelineStages.find((item) => item.name === prospect.status);
+    const stage = pipelineStages.find((item) => item.status === prospect.status);
     return sum + prospect.estimatedBudget * ((stage?.probability ?? 0) / 100);
   }, 0);
 

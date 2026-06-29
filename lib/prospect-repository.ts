@@ -1,8 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { getClubTravauxProspects } from "./clubtravaux-leads";
+import { getProspectPipelineStageKey, pipelineStageKeyToStatus, statusToPipelineStageKey } from "./pipeline";
 import { getSheetProspects } from "./sheet-prospects";
-import type { Appointment, BusinessLine, ClientSummary, Priority, Prospect, ProspectDocument, ProspectStatus } from "./types";
+import { buildWorkQueues } from "./work-queues";
+import type { Appointment, BusinessLine, Campaign, ClientSummary, PipelineStageKey, Priority, Prospect, ProspectDocument, ProspectStatus, WorkQueue } from "./types";
 
 const SYNC_TTL_MS = 5 * 60 * 1000;
 
@@ -16,6 +18,7 @@ type ProspectWithRelations = Prisma.ProspectGetPayload<{
     property: true;
     projects: true;
     source: true;
+    campaign: true;
     appointments: true;
     client: true;
   };
@@ -36,6 +39,16 @@ export type ProspectUpdateInput = Partial<
     | "city"
     | "department"
     | "source"
+    | "campaignId"
+    | "pipelineStageKey"
+    | "subStatus"
+    | "lostReason"
+    | "lostComment"
+    | "lostCompetitor"
+    | "lostAmount"
+    | "reactivationDate"
+    | "lastContactedAt"
+    | "contactAttempts"
     | "businessLine"
     | "status"
     | "priority"
@@ -62,6 +75,7 @@ export function isDatabaseConfigured() {
 }
 
 export async function getPersistentCrmProspects() {
+  await ensureDefaultCampaign();
   await syncExternalProspectsIfDue();
   const prospects = await prisma.prospect.findMany({
     include: {
@@ -69,6 +83,7 @@ export async function getPersistentCrmProspects() {
       property: true,
       projects: true,
       source: true,
+      campaign: true,
       appointments: true,
       client: true
     },
@@ -76,6 +91,23 @@ export async function getPersistentCrmProspects() {
   });
 
   return prospects.map(databaseProspectToProspect);
+}
+
+export async function getActiveCampaign(): Promise<Campaign> {
+  const campaign = await ensureDefaultCampaign();
+
+  return {
+    id: campaign.id,
+    name: campaign.name,
+    status: campaign.status,
+    active: campaign.active,
+    description: campaign.description ?? undefined
+  };
+}
+
+export async function getPersistentWorkQueues(): Promise<WorkQueue[]> {
+  const prospects = await getPersistentCrmProspects();
+  return buildWorkQueues(prospects);
 }
 
 export async function getPersistentAppointments(): Promise<Appointment[]> {
@@ -170,9 +202,19 @@ export async function createManualProspect(input: ProspectUpdateInput) {
     city: input.city ?? "",
     department: input.department ?? input.postalCode?.slice(0, 2) ?? "",
     source: input.source ?? "Saisie manuelle",
+    campaignId: input.campaignId,
     businessLine: input.businessLine ?? "Pompe a chaleur",
     assignedTo: "Thomas Cauquil",
     status: input.status ?? "Nouveau lead",
+    pipelineStageKey: input.pipelineStageKey,
+    subStatus: input.subStatus,
+    lostReason: input.lostReason ?? input.lossReason,
+    lostComment: input.lostComment,
+    lostCompetitor: input.lostCompetitor,
+    lostAmount: input.lostAmount,
+    reactivationDate: input.reactivationDate,
+    lastContactedAt: input.lastContactedAt,
+    contactAttempts: input.contactAttempts ?? 0,
     priority: input.priority ?? "Normale",
     score: input.score ?? 50,
     estimatedBudget: input.estimatedBudget ?? 0,
@@ -199,6 +241,7 @@ export async function updatePersistentProspect(id: string, input: ProspectUpdate
       property: true,
       projects: true,
       source: true,
+      campaign: true,
       appointments: true,
       client: true
     }
@@ -211,6 +254,7 @@ export async function updatePersistentProspect(id: string, input: ProspectUpdate
   const merged = {
     ...databaseProspectToProspect(existing),
     ...input,
+    pipelineStageKey: input.pipelineStageKey ?? (input.status ? statusToPipelineStageKey(input.status) : databaseProspectToProspect(existing).pipelineStageKey),
     projectTypes: input.projectTypes?.length ? input.projectTypes : databaseProspectToProspect(existing).projectTypes,
     updatedAt: new Date().toISOString()
   };
@@ -225,6 +269,7 @@ export async function findPersistentDuplicate(input: Pick<Prospect, "phone" | "e
       property: true,
       projects: true,
       source: true,
+      campaign: true,
       appointments: true,
       client: true
     }
@@ -285,6 +330,9 @@ async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInp
     create: { name: normalized.source },
     update: {}
   });
+  const campaign = await resolveCampaign(normalized.campaignId);
+  const nextPipelineStageKey = normalized.pipelineStageKey ?? statusToPipelineStageKey(normalized.status);
+  const nextStatus = normalized.status ?? pipelineStageKeyToStatus(nextPipelineStageKey);
 
   const saved = await prisma.prospect.upsert({
     where: { id: normalized.id },
@@ -296,7 +344,17 @@ async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInp
       phone: normalized.phone,
       secondaryPhone: normalized.secondaryPhone,
       email: normalized.email,
-      status: normalized.status,
+      status: nextStatus,
+      campaignId: campaign.id,
+      pipelineStageKey: nextPipelineStageKey,
+      subStatus: normalized.subStatus,
+      lostReason: normalized.lostReason ?? updateInput.lossReason,
+      lostComment: normalized.lostComment,
+      lostCompetitor: normalized.lostCompetitor,
+      lostAmount: normalized.lostAmount === undefined ? undefined : new Prisma.Decimal(normalized.lostAmount),
+      reactivationDate: parseOptionalDate(normalized.reactivationDate),
+      lastContactedAt: parseOptionalDate(normalized.lastContactedAt),
+      contactAttempts: normalized.contactAttempts,
       priority: normalized.priority,
       score: normalized.score,
       estimatedBudget: new Prisma.Decimal(normalized.estimatedBudget),
@@ -313,7 +371,17 @@ async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInp
       phone: normalized.phone,
       secondaryPhone: normalized.secondaryPhone,
       email: normalized.email,
-      status: normalized.status,
+      status: nextStatus,
+      campaignId: campaign.id,
+      pipelineStageKey: nextPipelineStageKey,
+      subStatus: normalized.subStatus,
+      lostReason: normalized.lostReason ?? updateInput.lossReason,
+      lostComment: normalized.lostComment,
+      lostCompetitor: normalized.lostCompetitor,
+      lostAmount: normalized.lostAmount === undefined ? undefined : new Prisma.Decimal(normalized.lostAmount),
+      reactivationDate: parseOptionalDate(normalized.reactivationDate),
+      lastContactedAt: parseOptionalDate(normalized.lastContactedAt),
+      contactAttempts: normalized.contactAttempts,
       priority: normalized.priority,
       score: normalized.score,
       estimatedBudget: new Prisma.Decimal(normalized.estimatedBudget),
@@ -328,6 +396,7 @@ async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInp
       property: true,
       projects: true,
       source: true,
+      campaign: true,
       appointments: true,
       client: true
     }
@@ -342,6 +411,7 @@ async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInp
       property: true,
       projects: true,
       source: true,
+      campaign: true,
       appointments: true,
       client: true
     }
@@ -412,6 +482,7 @@ async function replaceProspectDetails(prospectId: string, prospect: Prospect, up
 
   await syncAppointmentFromProspect(prospectId, prospect, updateInput);
   await syncClientFromProspect(prospectId, prospect);
+  await recordProspectActivity(prospectId, prospect, updateInput);
 }
 
 async function syncAppointmentFromProspect(prospectId: string, prospect: Prospect, updateInput: ProspectUpdateInput) {
@@ -517,9 +588,20 @@ function databaseProspectToProspect(prospect: ProspectWithRelations): Prospect {
     city: worksiteAddress?.city ?? personalAddress?.city ?? "",
     department: worksiteAddress?.department ?? personalAddress?.department ?? "",
     source: prospect.source?.name ?? "Saisie manuelle",
+    campaignId: prospect.campaignId ?? undefined,
+    campaignName: prospect.campaign?.name ?? undefined,
     businessLine,
     assignedTo: "Thomas Cauquil",
     status: prospect.status as ProspectStatus,
+    pipelineStageKey: (prospect.pipelineStageKey as PipelineStageKey | null) ?? statusToPipelineStageKey(prospect.status as ProspectStatus),
+    subStatus: prospect.subStatus ?? undefined,
+    lostReason: prospect.lostReason ?? undefined,
+    lostComment: prospect.lostComment ?? undefined,
+    lostCompetitor: prospect.lostCompetitor ?? undefined,
+    lostAmount: prospect.lostAmount === null ? undefined : Number(prospect.lostAmount),
+    reactivationDate: prospect.reactivationDate?.toISOString(),
+    lastContactedAt: prospect.lastContactedAt?.toISOString(),
+    contactAttempts: prospect.contactAttempts,
     priority: prospect.priority as Priority,
     score: prospect.score,
     estimatedBudget: Number(prospect.estimatedBudget),
@@ -538,6 +620,8 @@ function databaseProspectToProspect(prospect: ProspectWithRelations): Prospect {
 }
 
 function normalizeProspectInput(prospect: Prospect): Prospect {
+  const pipelineStageKey = prospect.pipelineStageKey ?? statusToPipelineStageKey(prospect.status);
+
   return {
     ...prospect,
     email: prospect.email ?? "",
@@ -547,11 +631,61 @@ function normalizeProspectInput(prospect: Prospect): Prospect {
     city: prospect.city ?? "",
     department: prospect.department || prospect.postalCode?.slice(0, 2) || "",
     projectTypes: prospect.projectTypes?.length ? prospect.projectTypes : [prospect.businessLine],
+    pipelineStageKey,
+    status: pipelineStageKeyToStatus(pipelineStageKey) === "Nouveau lead" ? prospect.status : prospect.status,
+    contactAttempts: prospect.contactAttempts ?? 0,
     housingType: prospect.housingType ?? "",
     nextAction: prospect.nextAction ?? "",
     nextFollowUp: prospect.nextFollowUp ?? new Date().toISOString(),
     comments: prospect.comments ?? ""
   };
+}
+
+async function ensureDefaultCampaign() {
+  return prisma.campaign.upsert({
+    where: { id: "campaign-historique-apcc" },
+    create: {
+      id: "campaign-historique-apcc",
+      name: "Campagne historique APCC",
+      status: "ACTIVE",
+      active: true,
+      description: "Campagne de reprise pour les leads importes avant la structuration multi-campagnes."
+    },
+    update: {
+      active: true,
+      status: "ACTIVE"
+    }
+  });
+}
+
+async function resolveCampaign(campaignId: string | undefined) {
+  if (!campaignId) return ensureDefaultCampaign();
+
+  const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+  return campaign ?? ensureDefaultCampaign();
+}
+
+async function recordProspectActivity(prospectId: string, prospect: Prospect, updateInput: ProspectUpdateInput) {
+  const shouldRecord = Boolean(updateInput.status || updateInput.pipelineStageKey || updateInput.lastContactedAt || updateInput.lossReason || updateInput.lostReason);
+  if (!shouldRecord) return;
+
+  await prisma.activity.create({
+    data: {
+      entityType: "Prospect",
+      entityId: prospectId,
+      prospectId,
+      campaignId: prospect.campaignId,
+      type: updateInput.status || updateInput.pipelineStageKey ? "pipeline.updated" : "prospect.updated",
+      channel: updateInput.lastContactedAt ? "telephone" : undefined,
+      direction: updateInput.lastContactedAt ? "outbound" : undefined,
+      body: prospect.nextAction || prospect.comments || undefined,
+      metadata: {
+        status: prospect.status,
+        pipelineStageKey: getProspectPipelineStageKey(prospect),
+        lostReason: prospect.lostReason ?? updateInput.lossReason
+      }
+    }
+  });
 }
 
 function inferBusinessLine(projectTypes: string[], description: string | null | undefined): BusinessLine {

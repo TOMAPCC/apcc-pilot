@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { pipelineStages } from "@/lib/demo-data";
-import type { BusinessLine, Prospect, ProspectStatus } from "@/lib/types";
+import { getProspectPipelineStageKey, pipelineStageKeyToStatus, pipelineStages } from "@/lib/pipeline";
+import type { BusinessLine, PipelineStageKey, Prospect } from "@/lib/types";
 
 const businessLines: Array<BusinessLine | "Toutes"> = ["Toutes", "Pompe a chaleur", "Prime Adapt"];
 
@@ -14,8 +14,25 @@ export function PipelineBoard({ initialProspects }: Readonly<{ initialProspects:
     setProspects(applyStoredProspectEdits(initialProspects));
   }, [initialProspects]);
 
-  function moveProspect(id: string, status: ProspectStatus) {
-    setProspects((items) => items.map((item) => (item.id === id ? { ...item, status } : item)));
+  async function moveProspect(id: string, pipelineStageKey: PipelineStageKey) {
+    const status = pipelineStageKeyToStatus(pipelineStageKey);
+    const previous = prospects;
+
+    setProspects((items) => items.map((item) => (item.id === id ? { ...item, pipelineStageKey, status } : item)));
+
+    try {
+      const response = await fetch(`/api/prospects/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pipelineStageKey, status })
+      });
+
+      if (!response.ok) {
+        throw new Error("Pipeline non enregistre.");
+      }
+    } catch {
+      setProspects(previous);
+    }
   }
 
   const visibleProspects = prospects.filter((prospect) => businessLine === "Toutes" || prospect.businessLine === businessLine);
@@ -31,8 +48,8 @@ export function PipelineBoard({ initialProspects }: Readonly<{ initialProspects:
       <section className="kanban" aria-label="Pipeline commercial">
         {pipelineStages.map((stage) => (
           <div className="column" key={stage.id}>
-            <h3>{stage.name} - {visibleProspects.filter((prospect) => prospect.status === stage.name).length}</h3>
-            {visibleProspects.filter((prospect) => prospect.status === stage.name).map((prospect) => (
+            <h3>{stage.name} - {visibleProspects.filter((prospect) => getProspectPipelineStageKey(prospect) === stage.id).length}</h3>
+            {visibleProspects.filter((prospect) => getProspectPipelineStageKey(prospect) === stage.id).map((prospect) => (
               <article className="deal-card" key={prospect.id}>
                 <span className={prospect.businessLine === "Prime Adapt" ? "source-pill prime" : "source-pill"}>{formatBusinessLine(prospect.businessLine)}</span>
                 <strong>{prospect.firstName} {prospect.lastName}</strong>
@@ -41,10 +58,10 @@ export function PipelineBoard({ initialProspects }: Readonly<{ initialProspects:
                 <p>{prospect.nextAction}</p>
                 <select
                   aria-label="Changer l'etape"
-                  value={prospect.status}
-                  onChange={(event) => moveProspect(prospect.id, event.target.value as ProspectStatus)}
+                  value={getProspectPipelineStageKey(prospect)}
+                  onChange={(event) => moveProspect(prospect.id, event.target.value as PipelineStageKey)}
                 >
-                  {pipelineStages.map((option) => <option key={option.id}>{option.name}</option>)}
+                  {pipelineStages.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
                 </select>
               </article>
             ))}

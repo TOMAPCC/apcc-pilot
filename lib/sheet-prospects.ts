@@ -1,5 +1,6 @@
 import { fetchAllSheetLeads } from "./sheets-import";
 import type { ImportedLead } from "./sheets-import";
+import { statusToPipelineStageKey } from "./pipeline";
 import type { Priority, Prospect, ProspectStatus } from "./types";
 import { getClubTravauxProspects } from "./clubtravaux-leads";
 
@@ -40,9 +41,13 @@ export function importedLeadToProspect(lead: ImportedLead): Prospect {
     city: inferCityLabel(lead.postalCode),
     department: lead.postalCode.slice(0, 2),
     source: lead.source,
+    campaignId: "campaign-historique-apcc",
+    campaignName: "Campagne historique APCC",
     businessLine: lead.businessLine,
     assignedTo: "A attribuer",
     status,
+    pipelineStageKey: statusToPipelineStageKey(status),
+    contactAttempts: 0,
     priority: inferPriority(lead),
     score: inferScore(lead),
     estimatedBudget: 0,

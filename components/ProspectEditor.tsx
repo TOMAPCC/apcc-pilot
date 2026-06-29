@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildCloserEmail } from "@/lib/closer-email";
+import { statusToPipelineStageKey } from "@/lib/pipeline";
 import type { Appointment, Priority, Prospect, ProspectDocument, ProspectStatus } from "@/lib/types";
 
 const statuses: ProspectStatus[] = [
@@ -76,7 +77,14 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   function update<K extends keyof ProspectDraft>(key: K, value: ProspectDraft[K]) {
     setSaved(false);
     setSaveMessage("");
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft((current) => {
+      if (key === "status") {
+        const status = value as ProspectStatus;
+        return { ...current, status, pipelineStageKey: statusToPipelineStageKey(status) };
+      }
+
+      return { ...current, [key]: value };
+    });
   }
 
   async function save() {
@@ -123,6 +131,9 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
     setDraft((current) => ({
       ...current,
       status: checked ? "N'a pas repondu" : current.status === "N'a pas repondu" ? "A contacter" : current.status,
+      pipelineStageKey: statusToPipelineStageKey(checked ? "N'a pas repondu" : current.status === "N'a pas repondu" ? "A contacter" : current.status),
+      contactAttempts: checked ? current.contactAttempts + 1 : current.contactAttempts,
+      lastContactedAt: checked ? new Date().toISOString() : current.lastContactedAt,
       nextAction: checked ? "Relance email closer envoyee puis rappel sous 24h" : current.nextAction,
       nextFollowUp: checked ? tomorrowIso() : current.nextFollowUp
     }));
@@ -159,6 +170,9 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
         setDraft((current) => ({
           ...current,
           status: "N'a pas repondu",
+          pipelineStageKey: statusToPipelineStageKey("N'a pas repondu"),
+          contactAttempts: current.contactAttempts + 1,
+          lastContactedAt: new Date().toISOString(),
           nextAction: "Relance Gmail envoyee puis rappel sous 24h",
           nextFollowUp: tomorrowIso()
         }));
@@ -212,6 +226,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
     setDraft((current) => ({
       ...current,
       status: "Dossier signe",
+      pipelineStageKey: statusToPipelineStageKey("Dossier signe"),
       priority: "Haute",
       nextAction: "Ouvrir le dossier client et classer les documents",
       nextFollowUp: new Date().toISOString()

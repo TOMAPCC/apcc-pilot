@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { Route } from "next";
 
 const nav = [
-  ["Tableau de bord", "/"],
+  ["Cockpit", "/"],
+  ["Ma journee", "/day"],
+  ["Files de travail", "/work-queues"],
   ["Prospects", "/prospects"],
   ["Clients", "/clients"],
   ["Pipeline", "/pipeline"],

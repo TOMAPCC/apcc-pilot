@@ -17,6 +17,9 @@ model User {
   prospects    Prospect[] @relation("AssignedProspects")
   tasks        Task[]
   auditLogs    AuditLog[]
+  activities   Activity[]
+  savedViews   SavedView[]
+  preferences  UserPreference[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   archivedAt   DateTime?
@@ -45,6 +48,21 @@ model LeadSource {
   createdAt DateTime   @default(now())
 }
 
+model Campaign {
+  id          String     @id @default(cuid())
+  name        String
+  status      String     @default("ACTIVE")
+  active      Boolean    @default(true)
+  description String?
+  prospects   Prospect[]
+  activities  Activity[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([active])
+  @@index([status])
+}
+
 model Prospect {
   id             String          @id @default(cuid())
   civility       String?
@@ -63,6 +81,17 @@ model Prospect {
   comments       String?
   sourceId       String?
   source         LeadSource?     @relation(fields: [sourceId], references: [id])
+  campaignId     String?
+  campaign       Campaign?       @relation(fields: [campaignId], references: [id])
+  pipelineStageKey String?
+  subStatus      String?
+  lostReason     String?
+  lostComment    String?
+  lostCompetitor String?
+  lostAmount     Decimal?
+  reactivationDate DateTime?
+  lastContactedAt DateTime?
+  contactAttempts Int            @default(0)
   assignedToId   String?
   assignedTo     User?           @relation("AssignedProspects", fields: [assignedToId], references: [id])
   addresses      Address[]
@@ -74,6 +103,7 @@ model Prospect {
   notes          Note[]
   documents      Document[]
   emailThreads   EmailThread[]
+  activities     Activity[]
   client         Client?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -83,6 +113,10 @@ model Prospect {
   @@index([phone])
   @@index([email])
   @@index([lastName])
+  @@index([campaignId])
+  @@index([pipelineStageKey])
+  @@index([status])
+  @@index([nextFollowUp])
 }
 
 model Client {
@@ -101,9 +135,63 @@ model Client {
   payments  Payment[]
   documents Document[]
   savRequests SavRequest[]
+  activities Activity[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   archivedAt DateTime?
+}
+
+model Activity {
+  id           String    @id @default(cuid())
+  entityType   String
+  entityId     String
+  prospectId   String?
+  prospect     Prospect? @relation(fields: [prospectId], references: [id])
+  clientId     String?
+  client       Client?   @relation(fields: [clientId], references: [id])
+  campaignId   String?
+  campaign     Campaign? @relation(fields: [campaignId], references: [id])
+  type         String
+  channel      String?
+  direction    String?
+  body         String?
+  metadata     Json?
+  createdById  String?
+  createdBy    User?     @relation(fields: [createdById], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@index([entityType, entityId])
+  @@index([prospectId])
+  @@index([clientId])
+  @@index([campaignId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model SavedView {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String?
+  owner     User?    @relation(fields: [ownerId], references: [id])
+  scope     String
+  filters   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([scope])
+}
+
+model UserPreference {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
 }
 
 model Address {

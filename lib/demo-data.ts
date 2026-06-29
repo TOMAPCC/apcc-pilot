@@ -1,23 +1,11 @@
-import type { Appointment, Connector, PipelineStage, Prospect, Task, User, Worksite } from "./types";
+import type { Appointment, Connector, Prospect, Task, User, Worksite } from "./types";
+export { pipelineStages } from "./pipeline";
 
 export const users: User[] = [
   { id: "u-admin", name: "Thomas Cauquil", email: "admin@apcc.fr", role: "Administrateur" },
   { id: "u-dir", name: "Direction APCC", email: "direction@apcc.fr", role: "Direction" },
   { id: "u-camille", name: "Camille Martin", email: "commercial@apcc.fr", role: "Commercial" },
   { id: "u-julien", name: "Julien Moreau", email: "travaux@apcc.fr", role: "Conducteur de travaux" }
-];
-
-export const pipelineStages: PipelineStage[] = [
-  { id: "new", name: "Nouveau lead", probability: 10 },
-  { id: "qualify", name: "A qualifier", probability: 18 },
-  { id: "contact", name: "A contacter", probability: 22 },
-  { id: "no-answer", name: "N'a pas repondu", probability: 20 },
-  { id: "met", name: "Contact etabli", probability: 35 },
-  { id: "visit", name: "Rendez-vous planifie", probability: 50 },
-  { id: "quote", name: "Devis envoye", probability: 65 },
-  { id: "nego", name: "Negociation", probability: 82 },
-  { id: "won", name: "Dossier signe", probability: 100 },
-  { id: "lost", name: "Dossier perdu", probability: 0 }
 ];
 
 export const prospects: Prospect[] = [];

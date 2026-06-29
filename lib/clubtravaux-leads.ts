@@ -1,4 +1,5 @@
 import type { Prospect } from "./types";
+import { statusToPipelineStageKey } from "./pipeline";
 
 type ClubTravauxLead = {
   projectId: number;
@@ -343,9 +344,13 @@ export function getClubTravauxProspects(): Prospect[] {
     city: cleanCity(lead.city, lead.postalCode),
     department: lead.postalCode.padStart(5, "0").slice(0, 2),
     source: "ClubTravaux",
+    campaignId: "campaign-historique-apcc",
+    campaignName: "Campagne historique APCC",
     businessLine: "Pompe a chaleur",
     assignedTo: normalizeAssignedTo(lead.assignedTo),
     status: "Nouveau lead",
+    pipelineStageKey: statusToPipelineStageKey("Nouveau lead"),
+    contactAttempts: 0,
     priority: lead.bloctel.toLowerCase().includes("liste") ? "Basse" : "Haute",
     score: inferScore(lead),
     estimatedBudget: 0,

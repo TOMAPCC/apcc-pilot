@@ -472,6 +472,94 @@ textarea {
   gap: 14px;
 }
 
+.queue-overview {
+  margin: 16px 0;
+}
+
+.queue-card,
+.queue-panel {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(17, 24, 39, .05);
+}
+
+.queue-card {
+  display: grid;
+  gap: 10px;
+  min-height: 168px;
+  padding: 16px;
+}
+
+.queue-card strong,
+.queue-panel h2 {
+  color: var(--apcc-navy);
+}
+
+.queue-card p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.queue-card em {
+  color: var(--apcc-bordeaux);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.work-queue-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.queue-panel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.queue-panel h2 {
+  font-size: 18px;
+  margin: 8px 0 0;
+}
+
+.queue-list {
+  display: grid;
+  gap: 9px;
+}
+
+.queue-row {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 11px 12px;
+}
+
+.queue-row strong,
+.queue-row small {
+  display: block;
+}
+
+.queue-row strong {
+  color: var(--apcc-navy);
+}
+
+.queue-row small,
+.queue-row em {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.queue-row em {
+  font-style: normal;
+  white-space: nowrap;
+}
+
 .filters-bar input,
 .filters-bar select {
   background: white;
@@ -908,7 +996,8 @@ textarea {
 
   .filters-bar,
   .lead-grid,
-  .detail-layout {
+  .detail-layout,
+  .work-queue-grid {
     grid-template-columns: 1fr;
   }
 

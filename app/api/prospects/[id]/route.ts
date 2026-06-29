@@ -18,6 +18,7 @@ const updateSchema = z.object({
   city: z.string().optional(),
   department: z.string().optional(),
   source: z.string().optional(),
+  campaignId: z.string().optional(),
   businessLine: z.enum(["Pompe a chaleur", "Prime Adapt"]).optional(),
   status: z.enum([
     "Nouveau lead",
@@ -31,6 +32,24 @@ const updateSchema = z.object({
     "Dossier signe",
     "Dossier perdu"
   ]).optional(),
+  pipelineStageKey: z.enum([
+    "nouveau",
+    "a-contacter",
+    "contact-en-cours",
+    "rendez-vous",
+    "etude-proposition",
+    "negociation",
+    "gagne",
+    "perdu"
+  ]).optional(),
+  subStatus: z.string().optional(),
+  lostReason: z.string().optional(),
+  lostComment: z.string().optional(),
+  lostCompetitor: z.string().optional(),
+  lostAmount: z.coerce.number().min(0).optional(),
+  reactivationDate: z.string().optional(),
+  lastContactedAt: z.string().optional(),
+  contactAttempts: z.coerce.number().min(0).optional(),
   priority: z.enum(["Basse", "Normale", "Haute", "Urgente"]).optional(),
   score: z.coerce.number().min(0).max(100).optional(),
   estimatedBudget: z.coerce.number().min(0).optional(),

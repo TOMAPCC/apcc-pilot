@@ -23,6 +23,24 @@ export type ProspectStatus =
   | "Dossier signe"
   | "Dossier perdu";
 
+export type PipelineStageKey =
+  | "nouveau"
+  | "a-contacter"
+  | "contact-en-cours"
+  | "rendez-vous"
+  | "etude-proposition"
+  | "negociation"
+  | "gagne"
+  | "perdu";
+
+export type Campaign = {
+  id: string;
+  name: string;
+  status: "ACTIVE" | "PAUSED" | "ARCHIVED" | string;
+  active: boolean;
+  description?: string;
+};
+
 export type User = {
   id: string;
   name: string;
@@ -44,9 +62,20 @@ export type Prospect = {
   city: string;
   department: string;
   source: string;
+  campaignId?: string;
+  campaignName?: string;
   businessLine: BusinessLine;
   assignedTo: string;
   status: ProspectStatus;
+  pipelineStageKey?: PipelineStageKey;
+  subStatus?: string;
+  lostReason?: string;
+  lostComment?: string;
+  lostCompetitor?: string;
+  lostAmount?: number;
+  reactivationDate?: string;
+  lastContactedAt?: string;
+  contactAttempts: number;
   priority: Priority;
   score: number;
   estimatedBudget: number;
@@ -64,9 +93,20 @@ export type Prospect = {
 };
 
 export type PipelineStage = {
-  id: string;
-  name: ProspectStatus;
+  id: PipelineStageKey;
+  name: string;
+  status: ProspectStatus;
   probability: number;
+};
+
+export type WorkQueue = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  count: number;
+  urgentCount: number;
+  prospects: Prospect[];
 };
 
 export type Task = {
