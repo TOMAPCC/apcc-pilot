@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ProspectEditor } from "@/components/ProspectEditor";
 import { getCrmProspects } from "@/lib/sheet-prospects";
@@ -22,7 +23,7 @@ export default async function ProspectDetailPage({ params }: Readonly<{ params: 
           <h1>Fiche prospect</h1>
           <p>Detail, qualification, coordonnees et edition rapide.</p>
         </div>
-        <a className="secondary-button" href="/prospects">Retour prospects</a>
+        <Link className="secondary-button" href="/prospects">Retour prospects</Link>
       </div>
       <ProspectEditor prospect={prospect} />
     </AppShell>

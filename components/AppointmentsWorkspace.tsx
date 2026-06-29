@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Appointment } from "@/lib/types";
 
 const APPOINTMENTS_KEY = "apcc-appointments";
@@ -19,8 +20,8 @@ export function AppointmentsWorkspace({ initialAppointments }: Readonly<{ initia
     return (
       <section className="empty-state">
         <h2>Aucun rendez-vous planifie</h2>
-        <p>Des qu'une fiche prospect passe en rendez-vous planifie avec une date, elle apparaitra ici automatiquement.</p>
-        <a className="button" href="/prospects">Qualifier les prospects</a>
+        <p>Des qu&apos;une fiche prospect passe en rendez-vous planifie avec une date, elle apparaitra ici automatiquement.</p>
+        <Link className="button" href="/prospects">Qualifier les prospects</Link>
       </section>
     );
   }

@@ -13,7 +13,7 @@ export default async function PipelinePage() {
       <div className="page-title">
         <div>
           <h1>Pipeline commercial</h1>
-          <p>Kanban de suivi avec probabilite de chiffre d'affaires par etape.</p>
+          <p>Kanban de suivi avec probabilite de chiffre d&apos;affaires par etape.</p>
         </div>
       </div>
       <PipelineBoard initialProspects={prospects} />

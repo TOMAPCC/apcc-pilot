@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { getCrmProspects, getSheetDashboardMetrics } from "@/lib/sheet-prospects";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,7 +21,7 @@ export default async function DashboardPage() {
           <h1>Tableau de bord</h1>
           <p>Vue operationnelle basee sur Google Sheets et ClubTravaux.</p>
         </div>
-        <a className="button" href="/prospects/new">Creer un prospect</a>
+        <Link className="button" href="/prospects/new">Creer un prospect</Link>
       </div>
 
       <section className="grid cols-4">

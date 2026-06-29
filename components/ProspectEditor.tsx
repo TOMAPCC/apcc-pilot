@@ -223,7 +223,7 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
             checked={draft.status === "N'a pas repondu"}
             onChange={(event) => toggleNoAnswer(event.target.checked)}
           />
-          <span>Marquer comme n'a pas repondu et preparer la relance</span>
+          <span>Marquer comme n&apos;a pas repondu et preparer la relance</span>
         </label>
 
         <div className="mail-preview">
@@ -248,9 +248,9 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
           </button>
         </div>
 
-        {sendStatus === "sent" ? <p className="toast">Relance envoyee depuis Gmail. Statut passe en n'a pas repondu.</p> : null}
-        {sendStatus === "not-configured" ? <p className="toast warning">Gmail n'est pas encore connecte cote serveur. Il faut ajouter l'OAuth Google dans Vercel pour activer l'envoi automatique.</p> : null}
-        {sendStatus === "error" ? <p className="toast warning">L'envoi Gmail a echoue. Verifie la connexion Gmail ou utilise le bouton Ouvrir dans Gmail.</p> : null}
+        {sendStatus === "sent" ? <p className="toast">Relance envoyee depuis Gmail. Statut passe en n&apos;a pas repondu.</p> : null}
+        {sendStatus === "not-configured" ? <p className="toast warning">Gmail n&apos;est pas encore connecte cote serveur. Il faut ajouter l&apos;OAuth Google dans Vercel pour activer l&apos;envoi automatique.</p> : null}
+        {sendStatus === "error" ? <p className="toast warning">L&apos;envoi Gmail a echoue. Verifie la connexion Gmail ou utilise le bouton Ouvrir dans Gmail.</p> : null}
       </section>
 
       <section className="timeline-panel">

@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { ProspectWorkspace } from "@/components/ProspectWorkspace";
 import { SyncSheetsButton } from "@/components/SyncSheetsButton";
 import { getCrmProspects } from "@/lib/sheet-prospects";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,7 +22,7 @@ export default async function ProspectsPage({
         </div>
         <div className="page-actions">
           <SyncSheetsButton />
-          <a className="button" href="/prospects/new">Nouveau prospect</a>
+          <Link className="button" href="/prospects/new">Nouveau prospect</Link>
         </div>
       </div>
 
