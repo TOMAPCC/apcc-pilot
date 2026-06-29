@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findPotentialDuplicate } from "@/lib/crm";
+import { createManualProspect, findPersistentDuplicate, isDatabaseConfigured } from "@/lib/prospect-repository";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -36,13 +37,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const duplicate = findPotentialDuplicate({
+  const duplicateInput = {
     phone: payload.data.phone,
     email: payload.data.email,
     lastName: payload.data.lastName,
     postalCode: payload.data.postalCode,
     worksiteAddress: payload.data.worksiteAddress
-  });
+  };
+
+  const duplicate = isDatabaseConfigured()
+    ? await findPersistentDuplicate(duplicateInput)
+    : findPotentialDuplicate(duplicateInput);
 
   if (duplicate) {
     return NextResponse.json({
@@ -52,8 +57,21 @@ export async function POST(request: Request) {
     });
   }
 
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json({
+      status: "created",
+      message: `Prospect ${payload.data.firstName} ${payload.data.lastName} valide. Ajoute DATABASE_URL pour activer la persistance PostgreSQL.`
+    });
+  }
+
+  const prospect = await createManualProspect({
+    ...payload.data,
+    projectTypes: payload.data.projectTypes?.split(";").map((item) => item.trim()).filter(Boolean)
+  });
+
   return NextResponse.json({
     status: "created",
-    message: `Prospect ${payload.data.firstName} ${payload.data.lastName} pret a etre cree. La persistance PostgreSQL sera activee apres migration Prisma.`
+    prospect,
+    message: `Prospect ${payload.data.firstName} ${payload.data.lastName} cree dans PostgreSQL.`
   });
 }

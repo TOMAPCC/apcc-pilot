@@ -1,0 +1,443 @@
+import { Prisma } from "@prisma/client";
+import { prisma } from "./db";
+import { getClubTravauxProspects } from "./clubtravaux-leads";
+import { getSheetProspects } from "./sheet-prospects";
+import type { Appointment, BusinessLine, Priority, Prospect, ProspectStatus } from "./types";
+
+const SYNC_TTL_MS = 5 * 60 * 1000;
+
+const globalSyncState = globalThis as unknown as {
+  apccLastExternalSyncAt?: number;
+};
+
+type ProspectWithRelations = Prisma.ProspectGetPayload<{
+  include: {
+    addresses: true;
+    property: true;
+    projects: true;
+    source: true;
+    appointments: true;
+  };
+}>;
+
+export type ProspectUpdateInput = Partial<
+  Pick<
+    Prospect,
+    | "civility"
+    | "firstName"
+    | "lastName"
+    | "phone"
+    | "secondaryPhone"
+    | "email"
+    | "address"
+    | "worksiteAddress"
+    | "postalCode"
+    | "city"
+    | "department"
+    | "source"
+    | "businessLine"
+    | "status"
+    | "priority"
+    | "score"
+    | "estimatedBudget"
+    | "expectedDecisionDate"
+    | "nextAction"
+    | "nextFollowUp"
+    | "projectTypes"
+    | "housingType"
+    | "heatingSystem"
+    | "maprimeCategory"
+    | "comments"
+  >
+> & {
+  appointmentStartsAt?: string;
+  appointmentAddress?: string;
+  appointmentNotes?: string;
+  lossReason?: string;
+};
+
+export function isDatabaseConfigured() {
+  return Boolean(process.env.DATABASE_URL);
+}
+
+export async function getPersistentCrmProspects() {
+  await syncExternalProspectsIfDue();
+  const prospects = await prisma.prospect.findMany({
+    include: {
+      addresses: true,
+      property: true,
+      projects: true,
+      source: true,
+      appointments: true
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  return prospects.map(databaseProspectToProspect);
+}
+
+export async function getPersistentAppointments(): Promise<Appointment[]> {
+  const appointments = await prisma.appointment.findMany({
+    include: { prospect: { include: { source: true, projects: true } } },
+    orderBy: { startsAt: "asc" }
+  });
+
+  return appointments.map((appointment) => ({
+    id: appointment.id,
+    prospectId: appointment.prospectId ?? "",
+    owner: "Thomas Cauquil",
+    title: appointment.title,
+    startsAt: appointment.startsAt.toISOString(),
+    address: appointment.address ?? "",
+    template: appointment.template ?? "Rendez-vous APCC"
+  }));
+}
+
+export async function syncExternalProspectsIfDue(force = false) {
+  if (!isDatabaseConfigured()) {
+    return { imported: 0, skipped: 0, mode: "fallback" as const };
+  }
+
+  const now = Date.now();
+  if (!force && globalSyncState.apccLastExternalSyncAt && now - globalSyncState.apccLastExternalSyncAt < SYNC_TTL_MS) {
+    return { imported: 0, skipped: 0, mode: "cached" as const };
+  }
+
+  const [sheetProspects, clubTravauxProspects] = await Promise.all([
+    getSheetProspects(),
+    Promise.resolve(getClubTravauxProspects())
+  ]);
+  const externalProspects = [...sheetProspects, ...clubTravauxProspects];
+
+  let imported = 0;
+  for (const prospect of externalProspects) {
+    await upsertProspect(prospect);
+    imported += 1;
+  }
+
+  globalSyncState.apccLastExternalSyncAt = now;
+  return { imported, skipped: 0, mode: "database" as const };
+}
+
+export async function createManualProspect(input: ProspectUpdateInput) {
+  const prospect = normalizeProspectInput({
+    id: `manual-${crypto.randomUUID()}`,
+    civility: "M.",
+    firstName: input.firstName ?? "",
+    lastName: input.lastName ?? "",
+    phone: input.phone ?? "",
+    email: input.email ?? "",
+    address: input.address ?? input.worksiteAddress ?? "",
+    worksiteAddress: input.worksiteAddress ?? input.address ?? "",
+    postalCode: input.postalCode ?? "",
+    city: input.city ?? "",
+    department: input.department ?? input.postalCode?.slice(0, 2) ?? "",
+    source: input.source ?? "Saisie manuelle",
+    businessLine: input.businessLine ?? "Pompe a chaleur",
+    assignedTo: "Thomas Cauquil",
+    status: input.status ?? "Nouveau lead",
+    priority: input.priority ?? "Normale",
+    score: input.score ?? 50,
+    estimatedBudget: input.estimatedBudget ?? 0,
+    expectedDecisionDate: input.expectedDecisionDate,
+    nextAction: input.nextAction ?? "Qualifier le lead",
+    nextFollowUp: input.nextFollowUp ?? new Date().toISOString(),
+    projectTypes: input.projectTypes?.length ? input.projectTypes : [input.businessLine ?? "Pompe a chaleur"],
+    housingType: input.housingType ?? "",
+    heatingSystem: input.heatingSystem,
+    maprimeCategory: input.maprimeCategory,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    comments: input.comments ?? ""
+  });
+
+  return upsertProspect(prospect, input);
+}
+
+export async function updatePersistentProspect(id: string, input: ProspectUpdateInput) {
+  const existing = await prisma.prospect.findUnique({
+    where: { id },
+    include: {
+      addresses: true,
+      property: true,
+      projects: true,
+      source: true,
+      appointments: true
+    }
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  const merged = {
+    ...databaseProspectToProspect(existing),
+    ...input,
+    projectTypes: input.projectTypes?.length ? input.projectTypes : databaseProspectToProspect(existing).projectTypes,
+    updatedAt: new Date().toISOString()
+  };
+
+  return upsertProspect(merged, input);
+}
+
+export async function findPersistentDuplicate(input: Pick<Prospect, "phone" | "email" | "lastName" | "postalCode" | "worksiteAddress">) {
+  const prospects = await prisma.prospect.findMany({
+    include: {
+      addresses: true,
+      property: true,
+      projects: true,
+      source: true,
+      appointments: true
+    }
+  });
+
+  return prospects.map(databaseProspectToProspect).find((prospect) => {
+    return (
+      normalize(prospect.phone) === normalize(input.phone) ||
+      normalize(prospect.email) === normalize(input.email) ||
+      `${normalize(prospect.lastName)}-${normalize(prospect.postalCode)}` === `${normalize(input.lastName)}-${normalize(input.postalCode)}` ||
+      normalize(prospect.worksiteAddress) === normalize(input.worksiteAddress)
+    );
+  });
+}
+
+async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInput = {}) {
+  const normalized = normalizeProspectInput(prospect);
+  const source = await prisma.leadSource.upsert({
+    where: { name: normalized.source },
+    create: { name: normalized.source },
+    update: {}
+  });
+
+  const saved = await prisma.prospect.upsert({
+    where: { id: normalized.id },
+    create: {
+      id: normalized.id,
+      civility: normalized.civility,
+      firstName: normalized.firstName,
+      lastName: normalized.lastName,
+      phone: normalized.phone,
+      secondaryPhone: normalized.secondaryPhone,
+      email: normalized.email,
+      status: normalized.status,
+      priority: normalized.priority,
+      score: normalized.score,
+      estimatedBudget: new Prisma.Decimal(normalized.estimatedBudget),
+      expectedDecisionDate: parseOptionalDate(normalized.expectedDecisionDate),
+      nextAction: normalized.nextAction,
+      nextFollowUp: parseOptionalDate(normalized.nextFollowUp),
+      comments: normalized.comments,
+      sourceId: source.id
+    },
+    update: {
+      civility: normalized.civility,
+      firstName: normalized.firstName,
+      lastName: normalized.lastName,
+      phone: normalized.phone,
+      secondaryPhone: normalized.secondaryPhone,
+      email: normalized.email,
+      status: normalized.status,
+      priority: normalized.priority,
+      score: normalized.score,
+      estimatedBudget: new Prisma.Decimal(normalized.estimatedBudget),
+      expectedDecisionDate: parseOptionalDate(normalized.expectedDecisionDate),
+      nextAction: normalized.nextAction,
+      nextFollowUp: parseOptionalDate(normalized.nextFollowUp),
+      comments: normalized.comments,
+      sourceId: source.id
+    },
+    include: {
+      addresses: true,
+      property: true,
+      projects: true,
+      source: true,
+      appointments: true
+    }
+  });
+
+  await replaceProspectDetails(saved.id, normalized, updateInput);
+
+  const refreshed = await prisma.prospect.findUniqueOrThrow({
+    where: { id: saved.id },
+    include: {
+      addresses: true,
+      property: true,
+      projects: true,
+      source: true,
+      appointments: true
+    }
+  });
+
+  return databaseProspectToProspect(refreshed);
+}
+
+async function replaceProspectDetails(prospectId: string, prospect: Prospect, updateInput: ProspectUpdateInput) {
+  await prisma.address.deleteMany({ where: { prospectId } });
+
+  const addressWrites = [
+    prospect.address
+      ? prisma.address.create({
+          data: {
+            prospectId,
+            label: "Adresse personnelle",
+            line1: prospect.address,
+            postalCode: prospect.postalCode,
+            city: prospect.city,
+            department: prospect.department
+          }
+        })
+      : null,
+    prospect.worksiteAddress
+      ? prisma.address.create({
+          data: {
+            prospectId,
+            label: "Adresse chantier",
+            line1: prospect.worksiteAddress,
+            postalCode: prospect.postalCode,
+            city: prospect.city,
+            department: prospect.department
+          }
+        })
+      : null
+  ].filter(Boolean) as Prisma.PrismaPromise<unknown>[];
+
+  await Promise.all(addressWrites);
+
+  await prisma.project.deleteMany({ where: { prospectId } });
+  await Promise.all(
+    prospect.projectTypes.map((type) =>
+      prisma.project.create({
+        data: {
+          prospectId,
+          type,
+          description: prospect.businessLine
+        }
+      })
+    )
+  );
+
+  await prisma.property.upsert({
+    where: { prospectId },
+    create: {
+      prospectId,
+      housingType: prospect.housingType,
+      heatingSystem: prospect.heatingSystem,
+      maprimeCategory: prospect.maprimeCategory
+    },
+    update: {
+      housingType: prospect.housingType,
+      heatingSystem: prospect.heatingSystem,
+      maprimeCategory: prospect.maprimeCategory
+    }
+  });
+
+  await syncAppointmentFromProspect(prospectId, prospect, updateInput);
+}
+
+async function syncAppointmentFromProspect(prospectId: string, prospect: Prospect, updateInput: ProspectUpdateInput) {
+  const appointmentId = `appointment-${prospectId}`;
+
+  if (prospect.status !== "Rendez-vous planifie") {
+    await prisma.appointment.deleteMany({ where: { id: appointmentId } });
+    return;
+  }
+
+  const startsAt = parseOptionalDate(updateInput.appointmentStartsAt) ?? tomorrowAtNine();
+  const address = updateInput.appointmentAddress ?? prospect.worksiteAddress ?? prospect.address ?? `${prospect.postalCode} ${prospect.city}`;
+
+  await prisma.appointment.upsert({
+    where: { id: appointmentId },
+    create: {
+      id: appointmentId,
+      prospectId,
+      title: `${prospect.firstName} ${prospect.lastName} - ${prospect.businessLine}`,
+      template: prospect.businessLine === "Prime Adapt" ? "RDV Prime Adapt" : "RDV pompe a chaleur",
+      startsAt,
+      address
+    },
+    update: {
+      title: `${prospect.firstName} ${prospect.lastName} - ${prospect.businessLine}`,
+      template: prospect.businessLine === "Prime Adapt" ? "RDV Prime Adapt" : "RDV pompe a chaleur",
+      startsAt,
+      address
+    }
+  });
+}
+
+function databaseProspectToProspect(prospect: ProspectWithRelations): Prospect {
+  const personalAddress = prospect.addresses.find((address) => address.label === "Adresse personnelle");
+  const worksiteAddress = prospect.addresses.find((address) => address.label === "Adresse chantier") ?? personalAddress;
+  const projectTypes = prospect.projects.map((project) => project.type);
+  const businessLine = inferBusinessLine(projectTypes, prospect.projects[0]?.description);
+
+  return {
+    id: prospect.id,
+    civility: (prospect.civility as Prospect["civility"]) ?? "M.",
+    firstName: prospect.firstName,
+    lastName: prospect.lastName,
+    phone: prospect.phone,
+    secondaryPhone: prospect.secondaryPhone ?? undefined,
+    email: prospect.email ?? "",
+    address: personalAddress?.line1 ?? "",
+    worksiteAddress: worksiteAddress?.line1 ?? "",
+    postalCode: worksiteAddress?.postalCode ?? personalAddress?.postalCode ?? "",
+    city: worksiteAddress?.city ?? personalAddress?.city ?? "",
+    department: worksiteAddress?.department ?? personalAddress?.department ?? "",
+    source: prospect.source?.name ?? "Saisie manuelle",
+    businessLine,
+    assignedTo: "Thomas Cauquil",
+    status: prospect.status as ProspectStatus,
+    priority: prospect.priority as Priority,
+    score: prospect.score,
+    estimatedBudget: Number(prospect.estimatedBudget),
+    expectedDecisionDate: prospect.expectedDecisionDate?.toISOString(),
+    nextAction: prospect.nextAction ?? "",
+    nextFollowUp: prospect.nextFollowUp?.toISOString() ?? prospect.createdAt.toISOString(),
+    projectTypes: projectTypes.length ? projectTypes : [businessLine],
+    housingType: prospect.property?.housingType ?? "",
+    heatingSystem: prospect.property?.heatingSystem ?? undefined,
+    maprimeCategory: prospect.property?.maprimeCategory ?? undefined,
+    createdAt: prospect.createdAt.toISOString(),
+    updatedAt: prospect.updatedAt.toISOString(),
+    comments: prospect.comments ?? ""
+  };
+}
+
+function normalizeProspectInput(prospect: Prospect): Prospect {
+  return {
+    ...prospect,
+    email: prospect.email ?? "",
+    address: prospect.address ?? "",
+    worksiteAddress: prospect.worksiteAddress ?? "",
+    postalCode: prospect.postalCode ?? "",
+    city: prospect.city ?? "",
+    department: prospect.department || prospect.postalCode?.slice(0, 2) || "",
+    projectTypes: prospect.projectTypes?.length ? prospect.projectTypes : [prospect.businessLine],
+    housingType: prospect.housingType ?? "",
+    nextAction: prospect.nextAction ?? "",
+    nextFollowUp: prospect.nextFollowUp ?? new Date().toISOString(),
+    comments: prospect.comments ?? ""
+  };
+}
+
+function inferBusinessLine(projectTypes: string[], description: string | null | undefined): BusinessLine {
+  const value = `${description ?? ""} ${projectTypes.join(" ")}`.toLowerCase();
+  return value.includes("prime adapt") || value.includes("pmr") ? "Prime Adapt" : "Pompe a chaleur";
+}
+
+function parseOptionalDate(value: string | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function tomorrowAtNine() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(9, 0, 0, 0);
+  return date;
+}
+
+function normalize(value: string | undefined) {
+  return (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}

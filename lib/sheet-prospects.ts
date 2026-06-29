@@ -9,6 +9,12 @@ export async function getSheetProspects() {
 }
 
 export async function getCrmProspects() {
+  const { getPersistentCrmProspects, isDatabaseConfigured } = await import("./prospect-repository");
+
+  if (isDatabaseConfigured()) {
+    return getPersistentCrmProspects();
+  }
+
   const sheetProspects = await getSheetProspects();
   const clubTravauxProspects = getClubTravauxProspects();
 

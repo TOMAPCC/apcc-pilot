@@ -31,6 +31,8 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   const storageKey = `apcc-prospect-edits:${prospect.id}`;
   const [draft, setDraft] = useState<ProspectDraft>(prospect);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
   const [mailCopied, setMailCopied] = useState(false);
   const [sendingMail, setSendingMail] = useState(false);
   const [sendStatus, setSendStatus] = useState<"idle" | "sent" | "not-configured" | "error">("idle");
@@ -52,10 +54,38 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
-  function save() {
-    window.localStorage.setItem(storageKey, JSON.stringify(draft));
-    syncAppointment(draft);
-    setSaved(true);
+  async function save() {
+    setSaving(true);
+    setSaveMessage("");
+
+    try {
+      const response = await fetch(`/api/prospects/${encodeURIComponent(prospect.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft)
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message ?? "Impossible d'enregistrer le prospect.");
+      }
+
+      if (result.prospect) {
+        setDraft((current) => ({ ...current, ...result.prospect }));
+      }
+
+      window.localStorage.setItem(storageKey, JSON.stringify(draft));
+      syncAppointment(draft);
+      setSaveMessage(result.message ?? buildSaveMessage(draft));
+      setSaved(true);
+    } catch (error) {
+      window.localStorage.setItem(storageKey, JSON.stringify(draft));
+      syncAppointment(draft);
+      setSaveMessage(error instanceof Error ? `${error.message} Sauvegarde locale conservee.` : "Sauvegarde locale conservee.");
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const closerMail = useMemo(() => buildCloserEmail(draft), [draft]);
@@ -139,9 +169,9 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
       <section className="editor-panel">
         <div className="section-head">
           <h2>Fiche prospect editable</h2>
-          <button className="button" onClick={save}>Enregistrer</button>
+          <button className="button" onClick={save} disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</button>
         </div>
-        {saved ? <p className="toast">{buildSaveMessage(draft)}</p> : null}
+        {saved ? <p className="toast">{saveMessage || buildSaveMessage(draft)}</p> : null}
 
         <div className="form-grid">
           <div className="field"><label>Prenom</label><input value={draft.firstName} onChange={(event) => update("firstName", event.target.value)} /></div>
