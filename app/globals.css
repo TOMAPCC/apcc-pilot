@@ -571,7 +571,8 @@ textarea {
 .identity-panel,
 .editor-panel,
 .timeline-panel,
-.closer-panel {
+.closer-panel,
+.documents-panel {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -631,12 +632,14 @@ textarea {
 
 .editor-panel,
 .timeline-panel,
-.closer-panel {
+.closer-panel,
+.documents-panel {
   padding: 18px;
 }
 
 .timeline-panel,
-.closer-panel {
+.closer-panel,
+.documents-panel {
   grid-column: 1 / -1;
 }
 
@@ -656,6 +659,61 @@ textarea {
 .closer-panel p {
   color: #344054;
   margin-bottom: 0;
+}
+
+.documents-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.documents-panel h2 {
+  color: var(--apcc-navy);
+  margin: 0;
+}
+
+.document-dropzone {
+  align-items: end;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.document-list {
+  display: grid;
+  gap: 10px;
+}
+
+.document-row {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.document-row strong,
+.document-row small {
+  display: block;
+}
+
+.document-row strong {
+  color: var(--apcc-navy);
+}
+
+.document-row small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.document-row em {
+  color: var(--apcc-bordeaux);
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .switch-row {

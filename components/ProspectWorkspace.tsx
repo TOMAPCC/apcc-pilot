@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import type { BusinessLine, Prospect, ProspectStatus } from "@/lib/types";
 
 const statuses: Array<ProspectStatus | "Tous"> = [
@@ -30,10 +32,35 @@ export function ProspectWorkspace({
   const [businessLine, setBusinessLine] = useState<(typeof businessLines)[number]>("Toutes");
   const [status, setStatus] = useState<(typeof statuses)[number]>("Tous");
   const [sort, setSort] = useState("recent");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setVisibleProspects(applyStoredProspectEdits(prospects));
   }, [prospects]);
+
+  useEffect(() => {
+    const stored = getStoredFilters();
+    setQuery(searchParams.get("q") ?? stored.q ?? initialQuery ?? "");
+    setSource(searchParams.get("source") ?? stored.source ?? "Toutes");
+    setBusinessLine((searchParams.get("activity") ?? stored.activity ?? "Toutes") as typeof businessLine);
+    setStatus((searchParams.get("status") ?? stored.status ?? "Tous") as typeof status);
+    setSort(searchParams.get("sort") ?? stored.sort ?? "recent");
+  }, [initialQuery, searchParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (source !== "Toutes") params.set("source", source);
+    if (businessLine !== "Toutes") params.set("activity", businessLine);
+    if (status !== "Tous") params.set("status", status);
+    if (sort !== "recent") params.set("sort", sort);
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    window.localStorage.setItem("apcc-prospect-filters", JSON.stringify({ q: query, source, activity: businessLine, status, sort }));
+    router.replace(nextUrl as Route, { scroll: false });
+  }, [businessLine, pathname, query, router, sort, source, status]);
 
   const sources = useMemo(() => ["Toutes", ...Array.from(new Set(visibleProspects.map((prospect) => prospect.source)))], [visibleProspects]);
 
@@ -105,7 +132,7 @@ export function ProspectWorkspace({
 
       <section className="lead-grid">
         {filtered.map((prospect) => (
-          <Link className="lead-card" href={`/prospects/${prospect.id}`} key={prospect.id}>
+          <Link className="lead-card" href={`/prospects/${prospect.id}?from=${encodeURIComponent(currentFilterPath(pathname, searchParams))}`} key={prospect.id}>
             <div className="lead-card-head">
               <span className={getSourceClassName(prospect)}>{formatBusinessLine(prospect.businessLine)}</span>
               <span className="score-ring">{prospect.score}</span>
@@ -153,4 +180,25 @@ function applyStoredProspectEdits(prospects: Prospect[]) {
     const stored = window.localStorage.getItem(`apcc-prospect-edits:${prospect.id}`);
     return stored ? { ...prospect, ...JSON.parse(stored) } : prospect;
   });
+}
+
+function getStoredFilters() {
+  if (typeof window === "undefined") return {};
+
+  try {
+    return JSON.parse(window.localStorage.getItem("apcc-prospect-filters") ?? "{}") as {
+      q?: string;
+      source?: string;
+      activity?: string;
+      status?: string;
+      sort?: string;
+    };
+  } catch {
+    return {};
+  }
+}
+
+function currentFilterPath(pathname: string, searchParams: { toString: () => string }) {
+  const params = searchParams.toString();
+  return params ? `${pathname}?${params}` : pathname;
 }

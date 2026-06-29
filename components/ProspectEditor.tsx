@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildCloserEmail } from "@/lib/closer-email";
-import type { Appointment, Priority, Prospect, ProspectStatus } from "@/lib/types";
+import type { Appointment, Priority, Prospect, ProspectDocument, ProspectStatus } from "@/lib/types";
 
 const statuses: ProspectStatus[] = [
   "Nouveau lead",
@@ -19,6 +19,7 @@ const statuses: ProspectStatus[] = [
 
 const priorities: Priority[] = ["Basse", "Normale", "Haute", "Urgente"];
 const APPOINTMENTS_KEY = "apcc-appointments";
+const documentCategories = ["Devis", "Facture", "Photo chantier", "Piece client", "Aide / prime", "Administratif", "Autre"];
 
 type ProspectDraft = Prospect & {
   appointmentStartsAt?: string;
@@ -36,6 +37,10 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
   const [mailCopied, setMailCopied] = useState(false);
   const [sendingMail, setSendingMail] = useState(false);
   const [sendStatus, setSendStatus] = useState<"idle" | "sent" | "not-configured" | "error">("idle");
+  const [documents, setDocuments] = useState<ProspectDocument[]>([]);
+  const [documentCategory, setDocumentCategory] = useState(documentCategories[0]);
+  const [documentMessage, setDocumentMessage] = useState("");
+  const [uploadingDocument, setUploadingDocument] = useState(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -43,6 +48,25 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
       setDraft({ ...prospect, ...JSON.parse(stored) });
     }
   }, [prospect, storageKey]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDocuments() {
+      try {
+        const response = await fetch(`/api/prospects/${encodeURIComponent(prospect.id)}/documents`);
+        const result = await response.json();
+        if (active) setDocuments(result.documents ?? []);
+      } catch {
+        if (active) setDocuments([]);
+      }
+    }
+
+    loadDocuments();
+    return () => {
+      active = false;
+    };
+  }, [prospect.id]);
 
   const completion = useMemo(() => {
     const fields = [draft.phone, draft.email, draft.address, draft.postalCode, draft.city, draft.heatingSystem, draft.comments];
@@ -144,6 +168,40 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
       setSendStatus("error");
     } finally {
       setSendingMail(false);
+    }
+  }
+
+  async function uploadDocument(file: File | undefined) {
+    if (!file) return;
+
+    setUploadingDocument(true);
+    setDocumentMessage("");
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const response = await fetch(`/api/prospects/${encodeURIComponent(prospect.id)}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          category: documentCategory,
+          mimeType: file.type || "application/octet-stream",
+          size: file.size,
+          dataUrl
+        })
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message ?? "Depot impossible.");
+      }
+
+      setDocuments((items) => [result.document, ...items]);
+      setDocumentMessage(result.message ?? "Document classe.");
+    } catch (error) {
+      setDocumentMessage(error instanceof Error ? error.message : "Depot impossible.");
+    } finally {
+      setUploadingDocument(false);
     }
   }
 
@@ -283,6 +341,48 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
         {sendStatus === "error" ? <p className="toast warning">L&apos;envoi Gmail a echoue. Verifie la connexion Gmail ou utilise le bouton Ouvrir dans Gmail.</p> : null}
       </section>
 
+      <section className="documents-panel">
+        <div className="section-head">
+          <div>
+            <span className="eyebrow">Classement</span>
+            <h2>Documents du prospect</h2>
+          </div>
+          <span className="badge blue">{documents.length} fichier(s)</span>
+        </div>
+
+        <div className="document-dropzone">
+          <div className="field">
+            <label>Classement</label>
+            <select value={documentCategory} onChange={(event) => setDocumentCategory(event.target.value)}>
+              {documentCategories.map((category) => <option key={category}>{category}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Depot de fichier</label>
+            <input
+              type="file"
+              onChange={(event) => uploadDocument(event.target.files?.[0])}
+              disabled={uploadingDocument}
+            />
+          </div>
+        </div>
+
+        {documentMessage ? <p className="toast">{documentMessage}</p> : null}
+
+        <div className="document-list">
+          {documents.map((document) => (
+            <a className="document-row" href={document.url} download={document.name} key={document.id}>
+              <span>
+                <strong>{document.name}</strong>
+                <small>{document.category} - {formatFileSize(document.size)} - {new Date(document.createdAt).toLocaleDateString("fr-FR")}</small>
+              </span>
+              <em>Telecharger</em>
+            </a>
+          ))}
+          {!documents.length ? <p className="muted">Aucun document classe pour ce prospect.</p> : null}
+        </div>
+      </section>
+
       <section className="timeline-panel">
         <h2>Chronologie</h2>
         <div className="timeline-item"><span />Lead recu depuis {draft.source}</div>
@@ -292,6 +392,21 @@ export function ProspectEditor({ prospect }: Readonly<{ prospect: Prospect }>) {
       </section>
     </div>
   );
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Lecture du fichier impossible."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatFileSize(size: number) {
+  if (!size) return "taille inconnue";
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} Ko`;
+  return `${(size / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
 function tomorrowIso() {

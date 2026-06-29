@@ -89,6 +89,16 @@ export type Appointment = {
   template: string;
 };
 
+export type ProspectDocument = {
+  id: string;
+  name: string;
+  category: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+};
+
 export type Connector = {
   id: string;
   name: string;

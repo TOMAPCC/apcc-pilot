@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { getClubTravauxProspects } from "./clubtravaux-leads";
 import { getSheetProspects } from "./sheet-prospects";
-import type { Appointment, BusinessLine, Priority, Prospect, ProspectStatus } from "./types";
+import type { Appointment, BusinessLine, Priority, Prospect, ProspectDocument, ProspectStatus } from "./types";
 
 const SYNC_TTL_MS = 5 * 60 * 1000;
 
@@ -199,6 +199,35 @@ export async function findPersistentDuplicate(input: Pick<Prospect, "phone" | "e
       normalize(prospect.worksiteAddress) === normalize(input.worksiteAddress)
     );
   });
+}
+
+export async function getProspectDocuments(prospectId: string): Promise<ProspectDocument[]> {
+  const documents = await prisma.document.findMany({
+    where: { prospectId },
+    orderBy: { createdAt: "desc" }
+  });
+
+  return documents.map(databaseDocumentToDocument);
+}
+
+export async function createProspectDocument(input: {
+  prospectId: string;
+  name: string;
+  category: string;
+  mimeType: string;
+  size: number;
+  dataUrl: string;
+}) {
+  const document = await prisma.document.create({
+    data: {
+      prospectId: input.prospectId,
+      name: `${input.category} - ${input.name}`,
+      path: input.dataUrl,
+      mimeType: `${input.mimeType};size=${input.size}`
+    }
+  });
+
+  return databaseDocumentToDocument(document);
 }
 
 async function upsertProspect(prospect: Prospect, updateInput: ProspectUpdateInput = {}) {
@@ -440,4 +469,24 @@ function tomorrowAtNine() {
 
 function normalize(value: string | undefined) {
   return (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function databaseDocumentToDocument(document: {
+  id: string;
+  name: string;
+  path: string;
+  mimeType: string;
+  createdAt: Date;
+}): ProspectDocument {
+  const [mimeType, sizePart] = document.mimeType.split(";size=");
+
+  return {
+    id: document.id,
+    name: document.name,
+    category: document.name.includes(" - ") ? document.name.split(" - ")[0] : "Document",
+    mimeType,
+    size: Number(sizePart ?? 0),
+    url: document.path,
+    createdAt: document.createdAt.toISOString()
+  };
 }
