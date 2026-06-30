@@ -387,7 +387,7 @@ async function replaceProspectDetails(prospectId: string, prospect: Prospect, up
           }
         })
       : null
-  ].filter(Boolean) as Prisma.PrismaPromise<unknown>[];
+  ].filter(Boolean) as Promise<unknown>[];
 
   await Promise.all(addressWrites);
 
