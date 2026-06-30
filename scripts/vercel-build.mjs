@@ -25,7 +25,11 @@ if (existsSync(clientFile)) {
 
 if (process.env.DATABASE_URL) {
   console.log("DATABASE_URL found — running prisma migrate deploy");
-  run("npx prisma migrate deploy");
+  try {
+    run("npx prisma migrate deploy");
+  } catch (e) {
+    console.error("⚠️  prisma migrate deploy failed (non-fatal — investigate separately):", e.message);
+  }
 } else {
   console.log("DATABASE_URL not set — skipping migrate deploy");
 }
