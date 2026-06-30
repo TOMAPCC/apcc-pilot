@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function ImportsPage() {
-  type GroupByRow = { department: string; classificationStatus: string; _count: number };
+  type GroupByRow = { department: string; classificationStatus: string; _count: { _all: number } };
   const [batches, counts]: [ImportBatchRow[], GroupByRow[]] = await Promise.all([
     prisma.importBatch.findMany({
       orderBy: { createdAt: "desc" },
@@ -16,7 +16,7 @@ export default async function ImportsPage() {
     prisma.copropriete.groupBy({
       by: ["department", "classificationStatus"],
       where: { isDemo: false, department: { in: TARGET_DEPARTMENTS } },
-      _count: true,
+      _count: { _all: true },
     }),
   ]);
 
@@ -82,7 +82,7 @@ export default async function ImportsPage() {
             {TARGET_DEPARTMENTS.map((dept) => {
               const deptCounts = counts.filter((c) => c.department === dept);
               const get = (status: string) =>
-                deptCounts.find((c) => c.classificationStatus === status)?._count ?? 0;
+                deptCounts.find((c) => c.classificationStatus === status)?._count._all ?? 0;
               return (
                 <tr key={dept}>
                   <td><strong>{dept}</strong></td>

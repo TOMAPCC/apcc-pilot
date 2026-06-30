@@ -59,7 +59,7 @@ export interface SyndicRow {
 export interface ContactRow {
   id: string;
   syndicId: string;
-  syndic: { id: string; name: string; siren: string | null };
+  syndic: { id: string; name: string; siren?: string | null };
   firstName: string | null;
   lastName: string;
   role: string | null;
