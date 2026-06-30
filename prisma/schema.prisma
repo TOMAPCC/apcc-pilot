@@ -546,6 +546,7 @@ model Syndic {
   coproprietes     Copropriete[]
   contacts         Contact[]
   clayJobs         ClayJob[]
+  interactions     Interaction[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -572,6 +573,7 @@ model Contact {
   isDemo         Boolean       @default(false)
   contactProofs  ContactProof[]
   emailDrafts    EmailDraft[]
+  interactions   Interaction[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }
@@ -674,7 +676,9 @@ model Interaction {
   coproprieteId String?
   copropriete   Copropriete? @relation(fields: [coproprieteId], references: [id])
   syndicId      String?
+  syndic        Syndic?      @relation(fields: [syndicId], references: [id])
   contactId     String?
+  contact       Contact?     @relation(fields: [contactId], references: [id])
   type          String
   direction     String?
   outcome       String?

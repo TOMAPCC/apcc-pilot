@@ -59,7 +59,7 @@ type RawGdprLog = {
   action: string; actor: string | null; createdAt: Date;
 };
 
-type ClassGroupRow = { energyClass: string | null; _count: number };
+type ClassGroupRow = { energyClass: string | null; _count: { _all: number } };
 
 export default async function CoproScanPage() {
   const depts = TARGET_DEPARTMENTS;
@@ -114,7 +114,7 @@ export default async function CoproScanPage() {
     prisma.copropriete.groupBy({
       by: ["energyClass"],
       where: { isDemo: false, department: { in: depts }, classificationStatus: "confirmed", energyClass: { in: efgIn } },
-      _count: true,
+      _count: { _all: true },
     }),
     prisma.clayJob.findMany({
       include: { syndic: { select: { name: true } } },
@@ -188,9 +188,9 @@ export default async function CoproScanPage() {
 
   const classRows = classGroupBy as ClassGroupRow[];
   const classCounts = {
-    G: classRows.find((r) => r.energyClass === "G")?._count ?? 0,
-    F: classRows.find((r) => r.energyClass === "F")?._count ?? 0,
-    E: classRows.find((r) => r.energyClass === "E")?._count ?? 0,
+    G: classRows.find((r) => r.energyClass === "G")?._count._all ?? 0,
+    F: classRows.find((r) => r.energyClass === "F")?._count._all ?? 0,
+    E: classRows.find((r) => r.energyClass === "E")?._count._all ?? 0,
   };
 
   const clayJobs = (clayJobsList as RawClayJob[]).map((j) => ({
