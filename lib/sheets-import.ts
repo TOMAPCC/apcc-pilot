@@ -29,7 +29,10 @@ export function getPublicCsvUrl(gid = process.env.GOOGLE_SHEETS_DEFAULT_GID || H
 }
 
 export async function fetchLatestSheetLeads(limit = 25) {
-  const response = await fetch(getPublicCsvUrl(HEAT_PUMP_GID), { cache: "no-store" });
+  const response = await fetch(getPublicCsvUrl(HEAT_PUMP_GID), {
+    cache: "no-store",
+    signal: AbortSignal.timeout(6000),
+  });
 
   if (!response.ok) {
     throw new Error(`Google Sheets a repondu ${response.status}`);
@@ -66,7 +69,10 @@ export async function fetchAllSheetLeads() {
 }
 
 export async function fetchLatestPrimeAdaptLeads(limit = 25) {
-  const response = await fetch(getPublicCsvUrl(PRIME_ADAPT_GID), { cache: "no-store" });
+  const response = await fetch(getPublicCsvUrl(PRIME_ADAPT_GID), {
+    cache: "no-store",
+    signal: AbortSignal.timeout(6000),
+  });
 
   if (!response.ok) {
     throw new Error(`Google Sheets Prime Adapt a repondu ${response.status}`);

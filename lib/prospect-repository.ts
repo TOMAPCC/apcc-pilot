@@ -62,7 +62,11 @@ export function isDatabaseConfigured() {
 }
 
 export async function getPersistentCrmProspects() {
-  await syncExternalProspectsIfDue().catch(() => {/* sync failed, serve stale DB data */});
+  const SYNC_TIMEOUT_MS = 7000;
+  await Promise.race([
+    syncExternalProspectsIfDue().catch(() => {}),
+    new Promise<void>((resolve) => setTimeout(resolve, SYNC_TIMEOUT_MS)),
+  ]);
   const prospects = await prisma.prospect.findMany({
     include: {
       addresses: true,
