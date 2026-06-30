@@ -468,3 +468,273 @@ model SavRequest {
   priority  String
   createdAt DateTime @default(now())
 }
+
+// ─── CoproScan B2B module ────────────────────────────────────────────────────
+
+model Copropriete {
+  id                     String   @id @default(cuid())
+  rnicId                 String?  @unique
+  bdnbId                 String?
+  name                   String
+  address                String
+  postalCode             String
+  city                   String
+  department             String
+  latitude               Float?
+  longitude              Float?
+  lotsCount              Int?
+  lotsResidential        Int?
+  constructionYear       Int?
+  heatingType            String?
+  heatingCollective      Boolean?
+  energyClass            String?
+  classificationStatus   String   @default("unknown")
+  classificationScore    Float    @default(0)
+  classificationConfidence Float  @default(0)
+  isDemo                 Boolean  @default(false)
+  dataOrigin             String   @default("rnic")
+  sourceType             String   @default("public")
+  gdprOpposedAt          DateTime?
+  syndicId               String?
+  syndic                 Syndic?  @relation(fields: [syndicId], references: [id])
+  batiments              Batiment[]
+  dpeProofs              DpeProof[]
+  energyProofs           EnergyProof[]
+  interactions           Interaction[]
+  emailDrafts            EmailDraft[]
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([department])
+  @@index([classificationStatus])
+  @@index([energyClass])
+  @@index([isDemo])
+}
+
+model Batiment {
+  id               String      @id @default(cuid())
+  coproprieteId    String
+  copropriete      Copropriete @relation(fields: [coproprieteId], references: [id])
+  bdnbBatId        String?
+  address          String?
+  constructionYear Int?
+  surfaceHabitable Float?
+  lotsCount        Int?
+  heatingType      String?
+  dpeLabel         String?
+  dpeRef           String?
+  dpeDate          DateTime?
+  createdAt        DateTime    @default(now())
+}
+
+model Syndic {
+  id               String       @id @default(cuid())
+  siren            String?      @unique
+  siret            String?
+  name             String
+  brandName        String?
+  address          String?
+  postalCode       String?
+  city             String?
+  phone            String?
+  email            String?
+  website          String?
+  enrichmentStatus String       @default("pending")
+  enrichedAt       DateTime?
+  isDemo           Boolean      @default(false)
+  gdprOpposedAt    DateTime?
+  coproprietes     Copropriete[]
+  contacts         Contact[]
+  clayJobs         ClayJob[]
+  interactions     Interaction[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([name])
+}
+
+model Contact {
+  id             String        @id @default(cuid())
+  syndicId       String
+  syndic         Syndic        @relation(fields: [syndicId], references: [id])
+  firstName      String?
+  lastName       String
+  role           String?
+  emailPro       String?
+  phonePro       String?
+  linkedinUrl    String?
+  contactStatus  String        @default("enrichment_required")
+  emailVerified  Boolean       @default(false)
+  sourceProvider String?
+  sourceUrl      String?
+  sourceDate     DateTime?
+  relevanceScore Float         @default(0)
+  gdprOpposedAt  DateTime?
+  isDemo         Boolean       @default(false)
+  contactProofs  ContactProof[]
+  emailDrafts    EmailDraft[]
+  interactions   Interaction[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model ContactProof {
+  id          String   @id @default(cuid())
+  contactId   String
+  contact     Contact  @relation(fields: [contactId], references: [id])
+  provider    String
+  sourceType  String
+  rawData     Json?
+  confidence  Float
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model DpeProof {
+  id              String      @id @default(cuid())
+  coproprieteId   String
+  copropriete     Copropriete @relation(fields: [coproprieteId], references: [id])
+  ademeRef        String?
+  energyClass     String
+  dpeScore        Float?
+  gesScore        Float?
+  scope           String
+  isCollective    Boolean     @default(false)
+  sourceUrl       String?
+  sourceDate      DateTime?
+  millesime       Int?
+  matchMethod     String?
+  matchConfidence Float       @default(0)
+  rawValue        Json?
+  createdAt       DateTime    @default(now())
+}
+
+model EnergyProof {
+  id            String      @id @default(cuid())
+  coproprieteId String
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  proofType     String
+  value         String?
+  source        String
+  sourceUrl     String?
+  sourceRef     String?
+  millesime     Int?
+  proofDate     DateTime?
+  confidence    Float       @default(0)
+  rawData       Json?
+  createdAt     DateTime    @default(now())
+}
+
+model ClayJob {
+  id              String   @id @default(cuid())
+  syndicId        String
+  syndic          Syndic   @relation(fields: [syndicId], references: [id])
+  jobType         String
+  status          String   @default("pending")
+  webhookUrl      String?
+  idempotencyKey  String   @unique
+  requestPayload  Json?
+  resultPayload   Json?
+  errorMessage    String?
+  attempts        Int      @default(0)
+  lastAttemptAt   DateTime?
+  gdprBasis       String   @default("legitimate_interest_b2b")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([syndicId])
+}
+
+model EmailDraft {
+  id                  String      @id @default(cuid())
+  coproprieteId       String?
+  copropriete         Copropriete? @relation(fields: [coproprieteId], references: [id])
+  syndicId            String?
+  contactId           String?
+  contact             Contact?    @relation(fields: [contactId], references: [id])
+  subject             String
+  bodyHtml            String
+  bodyText            String
+  subjectVariants     Json?
+  claims              Json?
+  draftStatus         String      @default("generated")
+  followUpJ4          String?
+  followUpJ9          String?
+  followUpJ15         String?
+  proposedSlots       Json?
+  bookingUrl          String?
+  oppositionCheckedAt DateTime?
+  gmailDraftId        String?
+  isDemo              Boolean     @default(false)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
+
+model Interaction {
+  id            String      @id @default(cuid())
+  coproprieteId String?
+  copropriete   Copropriete? @relation(fields: [coproprieteId], references: [id])
+  syndicId      String?
+  syndic        Syndic?      @relation(fields: [syndicId], references: [id])
+  contactId     String?
+  contact       Contact?     @relation(fields: [contactId], references: [id])
+  type          String
+  direction     String?
+  outcome       String?
+  notes         String?
+  occurredAt    DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+}
+
+model ImportBatch {
+  id              String            @id @default(cuid())
+  source          String
+  department      String?
+  status          String            @default("pending")
+  recordsTotal    Int               @default(0)
+  recordsImported Int               @default(0)
+  recordsUpdated  Int               @default(0)
+  recordsRejected Int               @default(0)
+  recordsSkipped  Int               @default(0)
+  errorLog        Json?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  rejections      ImportRejection[]
+}
+
+model ImportRejection {
+  id        String      @id @default(cuid())
+  batchId   String
+  batch     ImportBatch @relation(fields: [batchId], references: [id])
+  rawData   Json
+  reason    String
+  field     String?
+  createdAt DateTime    @default(now())
+}
+
+model GdprLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  actor      String?
+  details    Json?
+  createdAt  DateTime @default(now())
+}
+
+model OppositionList {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String?
+  email      String?
+  phone      String?
+  siren      String?
+  reason     String?
+  source     String   @default("manual")
+  opposedAt  DateTime @default(now())
+
+  @@index([email])
+  @@index([siren])
+}

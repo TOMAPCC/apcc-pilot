@@ -96,6 +96,15 @@ export async function getPersistentAppointments(): Promise<Appointment[]> {
 }
 
 export async function getPersistentClients(): Promise<ClientSummary[]> {
+  type ClientRow = {
+    id: string; number: string; prospectId?: string | null;
+    firstName: string; lastName: string; email?: string | null; phone?: string | null;
+    addresses: { line1?: string | null; postalCode?: string | null; city?: string | null }[];
+    projects: { type: string }[];
+    documents: unknown[];
+    createdAt: Date;
+    prospect?: { projects: { type: string }[] } | null;
+  };
   const clients = await prisma.client.findMany({
     include: {
       prospect: { include: { projects: true } },
@@ -104,7 +113,7 @@ export async function getPersistentClients(): Promise<ClientSummary[]> {
       documents: true
     },
     orderBy: { createdAt: "desc" }
-  });
+  }) as ClientRow[];
 
   return clients.map((client) => {
     const address = client.addresses[0];
@@ -378,7 +387,7 @@ async function replaceProspectDetails(prospectId: string, prospect: Prospect, up
           }
         })
       : null
-  ].filter(Boolean) as Prisma.PrismaPromise<unknown>[];
+  ].filter(Boolean) as Promise<unknown>[];
 
   await Promise.all(addressWrites);
 
@@ -498,10 +507,14 @@ async function syncClientFromProspect(prospectId: string, prospect: Prospect) {
 }
 
 function databaseProspectToProspect(prospect: ProspectWithRelations): Prospect {
-  const personalAddress = prospect.addresses.find((address) => address.label === "Adresse personnelle");
-  const worksiteAddress = prospect.addresses.find((address) => address.label === "Adresse chantier") ?? personalAddress;
-  const projectTypes = prospect.projects.map((project) => project.type);
-  const businessLine = inferBusinessLine(projectTypes, prospect.projects[0]?.description);
+  type AddressRow = { label?: string; line1?: string; postalCode?: string; city?: string; department?: string };
+  type ProjectRow = { type: string; description?: string | null };
+  const addresses = prospect.addresses as AddressRow[];
+  const projects = prospect.projects as ProjectRow[];
+  const personalAddress = addresses.find((address) => address.label === "Adresse personnelle");
+  const worksiteAddress = addresses.find((address) => address.label === "Adresse chantier") ?? personalAddress;
+  const projectTypes = projects.map((project) => project.type);
+  const businessLine = inferBusinessLine(projectTypes, projects[0]?.description);
 
   return {
     id: prospect.id,

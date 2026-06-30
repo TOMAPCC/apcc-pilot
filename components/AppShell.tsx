@@ -8,7 +8,8 @@ const nav = [
   ["Pipeline", "/pipeline"],
   ["Taches", "/tasks"],
   ["Rendez-vous", "/appointments"],
-  ["Chantiers", "/worksites"]
+  ["Chantiers", "/worksites"],
+  ["CoproScan B2B", "/coproscan"]
 ] as const;
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {

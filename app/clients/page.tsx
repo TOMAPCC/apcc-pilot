@@ -88,7 +88,7 @@ async function getClients(): Promise<ClientSummary[]> {
   }
 
   const prospects = await getCrmProspects();
-  return prospects
+  return (prospects as import("@/lib/types").Prospect[])
     .filter((prospect) => prospect.status === "Dossier signe")
     .map((prospect) => ({
       id: `client-${prospect.id}`,

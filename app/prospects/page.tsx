@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { ProspectWorkspace } from "@/components/ProspectWorkspace";
 import { SyncSheetsButton } from "@/components/SyncSheetsButton";
 import { getCrmProspects } from "@/lib/sheet-prospects";
+import type { Prospect } from "@/lib/types";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function ProspectsPage({
   searchParams
 }: Readonly<{ searchParams?: Promise<{ q?: string }> }>) {
   const params = await searchParams;
-  const prospects = await getCrmProspects();
+  const prospects = await getCrmProspects() as Prospect[];
 
   return (
     <AppShell>

@@ -1,12 +1,13 @@
 import { AppShell } from "@/components/AppShell";
 import { PipelineBoard } from "@/components/PipelineBoard";
 import { getCrmProspects } from "@/lib/sheet-prospects";
+import type { Prospect } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function PipelinePage() {
-  const prospects = await getCrmProspects();
+  const prospects = await getCrmProspects() as Prospect[];
 
   return (
     <AppShell>
