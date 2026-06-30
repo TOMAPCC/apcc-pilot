@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import type { Route } from "next";
 
 const BLUE = "#263A7A";
 const RED = "#C82333";
@@ -208,7 +209,7 @@ function Card({ children, title, icon }: { children: React.ReactNode; title: str
 function ViewMore({ href, label = "Voir tout →" }: { href: string; label?: string }) {
   return (
     <div style={{ textAlign: "right", marginTop: 8 }}>
-      <Link href={href as never} style={{ fontSize: 12, color: BLUE }}>{label}</Link>
+      <Link href={href as Route<string>} style={{ fontSize: 12, color: BLUE }}>{label}</Link>
     </div>
   );
 }
@@ -271,7 +272,7 @@ function TabConfirmed({ d }: { d: DashboardData }) {
                   <Td>{item.lotsResidential ?? item.lotsCount ?? "—"}</Td>
                   <Td>
                     {item.syndic
-                      ? <Link href={`/coproscan/syndics/${item.syndic.id}` as never} style={{ color: BLUE }}>{item.syndic.name}</Link>
+                      ? <Link href={`/coproscan/syndics/${item.syndic.id}` as Route<string>} style={{ color: BLUE }}>{item.syndic.name}</Link>
                       : <span style={{ color: MUTED }}>—</span>}
                   </Td>
                   <Td style={{ color: item.dpeProofsCount > 0 ? "#16a34a" : MUTED }}>{item.dpeProofsCount}</Td>
@@ -384,7 +385,7 @@ function TabSyndics({ d }: { d: DashboardData }) {
           d.syndics.map((s) => (
             <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
               <div>
-                <Link href={`/coproscan/syndics/${s.id}` as never} style={{ fontWeight: 600, color: "#1a1a18", fontSize: 13 }}>{s.name}</Link>
+                <Link href={`/coproscan/syndics/${s.id}` as Route<string>} style={{ fontWeight: 600, color: "#1a1a18", fontSize: 13 }}>{s.name}</Link>
                 <div style={{ fontSize: 11, color: MUTED }}>{s.siren ? `SIREN ${s.siren}` : "SIREN inconnu"}{s.city ? ` · ${s.city}` : ""}</div>
               </div>
               <div style={{ textAlign: "right" }}>
@@ -549,7 +550,7 @@ function TabPipeline({ d }: { d: DashboardData }) {
           </div>
           {stage.items.map((s) => (
             <div key={s.id} style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, marginBottom: 6, fontSize: 12 }}>
-              <Link href={`/coproscan/syndics/${s.id}` as never} style={{ fontWeight: 600, color: "#1a1a18" }}>{s.name}</Link>
+              <Link href={`/coproscan/syndics/${s.id}` as Route<string>} style={{ fontWeight: 600, color: "#1a1a18" }}>{s.name}</Link>
               {s.city && <div style={{ fontSize: 10, color: MUTED }}>{s.city}</div>}
               <div style={{ marginTop: 4, fontSize: 10, color: MUTED }}>{s.copropCount} copros · {s.contactsCount} contacts</div>
             </div>
