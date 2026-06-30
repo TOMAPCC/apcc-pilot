@@ -28,7 +28,7 @@ export interface CoproprieteRow {
   createdAt: Date;
   updatedAt: Date;
   syndic?: { id: string; name: string; enrichmentStatus?: string } | null;
-  _count: { dpeProofs: number; energyProofs: number; interactions: number; emailDrafts: number };
+  _count: { dpeProofs: number; energyProofs?: number; emailDrafts?: number; interactions?: number };
 }
 
 export interface SyndicRow {
