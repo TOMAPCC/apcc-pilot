@@ -7,18 +7,24 @@ export const revalidate = 0;
 
 export default async function ImportsPage() {
   type GroupByRow = { department: string; classificationStatus: string; _count: { _all: number } };
-  const [batches, counts]: [ImportBatchRow[], GroupByRow[]] = await Promise.all([
-    prisma.importBatch.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 30,
-      include: { _count: { select: { rejections: true } } },
-    }),
-    prisma.copropriete.groupBy({
-      by: ["department", "classificationStatus"],
-      where: { isDemo: false, department: { in: TARGET_DEPARTMENTS } },
-      _count: { _all: true },
-    }),
-  ]);
+  let batches: ImportBatchRow[] = [];
+  let counts: GroupByRow[] = [];
+  try {
+    [batches, counts] = await Promise.all([
+      prisma.importBatch.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        include: { _count: { select: { rejections: true } } },
+      }),
+      prisma.copropriete.groupBy({
+        by: ["department", "classificationStatus"],
+        where: { isDemo: false, department: { in: TARGET_DEPARTMENTS } },
+        _count: { _all: true },
+      }),
+    ]);
+  } catch {
+    // DB unavailable — serve empty lists
+  }
 
   const statusColor: Record<string, string> = {
     done: "var(--success)",

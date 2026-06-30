@@ -21,29 +21,34 @@ const PIPELINE_STAGES = [
 ];
 
 export default async function PipelinePage() {
-  const syndics = await prisma.syndic.findMany({
-    where: {
-      isDemo: false,
-      gdprOpposedAt: null,
-      coproprietes: {
-        some: {
-          department: { in: TARGET_DEPARTMENTS },
-          classificationStatus: "confirmed",
-          energyClass: { in: ["E", "F", "G"] },
-          isDemo: false,
+  let syndics: SyndicPipelineItem[] = [];
+  try {
+    syndics = await prisma.syndic.findMany({
+      where: {
+        isDemo: false,
+        gdprOpposedAt: null,
+        coproprietes: {
+          some: {
+            department: { in: TARGET_DEPARTMENTS },
+            classificationStatus: "confirmed",
+            energyClass: { in: ["E", "F", "G"] },
+            isDemo: false,
+          },
         },
       },
-    },
-    include: {
-      _count: { select: { coproprietes: true, contacts: true, clayJobs: true } },
-      interactions: {
-        orderBy: { occurredAt: "desc" },
-        take: 1,
-        select: { type: true, outcome: true, occurredAt: true },
+      include: {
+        _count: { select: { coproprietes: true, contacts: true, clayJobs: true } },
+        interactions: {
+          orderBy: { occurredAt: "desc" },
+          take: 1,
+          select: { type: true, outcome: true, occurredAt: true },
+        },
       },
-    },
-    take: 200,
-  }) as SyndicPipelineItem[];
+      take: 200,
+    }) as SyndicPipelineItem[];
+  } catch {
+    // DB unavailable — serve empty list
+  }
 
   // Simple stage derivation from syndic state
   function getStage(s: SyndicPipelineItem): string {

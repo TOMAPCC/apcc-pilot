@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 export default function CoproScanError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
@@ -16,6 +17,11 @@ export default function CoproScanError({
         <br />
         Vérifiez que DATABASE_URL est configuré et que les migrations ont été appliquées.
       </p>
+      {error?.message && (
+        <pre style={{ textAlign: "left", background: "#f4f4f2", border: "1px solid #e5e5e3", borderRadius: 8, padding: 14, fontSize: 12, color: "#c82333", maxWidth: 600, margin: "0 auto 20px", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {error.message}
+        </pre>
+      )}
       <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
         <button onClick={reset} style={{ padding: "8px 20px", cursor: "pointer" }}>
           Réessayer

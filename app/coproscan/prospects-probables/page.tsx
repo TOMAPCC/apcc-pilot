@@ -6,20 +6,25 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function ProspectsProbablesPage() {
-  const items = await prisma.copropriete.findMany({
-    where: {
-      isDemo: false,
-      department: { in: TARGET_DEPARTMENTS },
-      classificationStatus: "probable",
-      energyClass: { in: ["E", "F", "G"] },
-    },
-    include: {
-      syndic: { select: { id: true, name: true } },
-      _count: { select: { dpeProofs: true } },
-    },
-    orderBy: [{ classificationScore: "desc" }, { classificationConfidence: "desc" }],
-    take: 200,
-  }) as CoproprieteRow[];
+  let items: CoproprieteRow[] = [];
+  try {
+    items = await prisma.copropriete.findMany({
+      where: {
+        isDemo: false,
+        department: { in: TARGET_DEPARTMENTS },
+        classificationStatus: "probable",
+        energyClass: { in: ["E", "F", "G"] },
+      },
+      include: {
+        syndic: { select: { id: true, name: true } },
+        _count: { select: { dpeProofs: true } },
+      },
+      orderBy: [{ classificationScore: "desc" }, { classificationConfidence: "desc" }],
+      take: 200,
+    }) as CoproprieteRow[];
+  } catch {
+    // DB unavailable — serve empty list
+  }
 
   return (
     <div>
