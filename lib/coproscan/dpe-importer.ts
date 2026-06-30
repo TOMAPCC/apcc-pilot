@@ -140,7 +140,7 @@ export async function importDpeForDepartment(department: string): Promise<{
       recordsUpdated: 0,
       recordsRejected: imported - matched,
       completedAt: new Date(),
-      errorLog: errors.length > 0 ? errors : null,
+      ...(errors.length > 0 ? { errorLog: errors } : {}),
     },
   });
 

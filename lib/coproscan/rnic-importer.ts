@@ -182,7 +182,7 @@ export async function importRnicDepartment(department: string): Promise<ImportRe
       recordsUpdated: totalUpdated,
       recordsRejected: totalRejected,
       completedAt: new Date(),
-      errorLog: errors.length > 0 ? errors : null,
+      ...(errors.length > 0 ? { errorLog: errors } : {}),
     },
   });
 
