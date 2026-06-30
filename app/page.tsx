@@ -8,7 +8,12 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const prospects = await getCrmProspects() as Prospect[];
+  let prospects: Prospect[] = [];
+  try {
+    prospects = (await getCrmProspects()) as Prospect[];
+  } catch {
+    // serve empty dashboard if all data sources fail
+  }
   const metrics = getSheetDashboardMetrics(prospects);
   const latestProspects = prospects.slice(0, 8);
   const clubTravauxCount = prospects.filter((prospect) => prospect.source === "ClubTravaux").length;
