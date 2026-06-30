@@ -13,7 +13,7 @@ export async function logGdprAction(params: {
       entityId: params.entityId,
       action: params.action,
       actor: params.actor ?? null,
-      details: params.details ?? null,
+      ...(params.details !== undefined ? { details: params.details } : {}),
     },
   });
 }
