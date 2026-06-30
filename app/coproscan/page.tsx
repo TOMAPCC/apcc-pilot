@@ -66,7 +66,16 @@ export default async function CoproScanPage() {
   const efgIn = ["E", "F", "G"];
   const isProduction = process.env.APP_ENV === "production" && process.env.DEMO_MODE !== "true";
 
-  const [
+  let confirmedList: unknown[] = [], probableList: unknown[] = [], unknownList: unknown[] = [],
+    topSyndics: unknown[] = [], classGroupBy: unknown[] = [], clayJobsList: unknown[] = [],
+    contactsList: unknown[] = [], draftsList: unknown[] = [], pipelineSyndics: unknown[] = [],
+    batchList: unknown[] = [], oppositionList: unknown[] = [], gdprLogList: unknown[] = [],
+    contactsOpposed = 0, syndicsOpposed = 0,
+    confirmedCount = 0, probableCount = 0, unknownCount = 0,
+    syndicCount = 0, contactCount = 0, draftCount = 0;
+
+  try {
+  [
     confirmedList,
     probableList,
     unknownList,
@@ -155,6 +164,9 @@ export default async function CoproScanPage() {
     prisma.contact.count({ where: { isDemo: false, gdprOpposedAt: null } }),
     prisma.emailDraft.count(),
   ]);
+  } catch {
+    // DB unavailable — serve empty dashboard
+  }
 
   const confirmed = (confirmedList as RawCopro[]).map((c) => ({
     id: c.id, name: c.name, address: c.address, city: c.city, department: c.department,
