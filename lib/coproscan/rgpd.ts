@@ -5,7 +5,7 @@ export async function logGdprAction(params: {
   entityId: string;
   action: string;
   actor?: string;
-  details?: Record<string, unknown>;
+  details?: Record<string, string | number | boolean | null>;
 }) {
   return prisma.gdprLog.create({
     data: {
@@ -60,7 +60,7 @@ export async function addOpposition(params: {
     entityType: params.entityType,
     entityId: params.entityId,
     action: "opposition",
-    details: { source: params.source, reason: params.reason },
+    details: { source: params.source ?? null, reason: params.reason ?? null },
   });
 }
 
