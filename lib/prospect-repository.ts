@@ -62,7 +62,7 @@ export function isDatabaseConfigured() {
 }
 
 export async function getPersistentCrmProspects() {
-  await syncExternalProspectsIfDue();
+  await syncExternalProspectsIfDue().catch(() => {/* sync failed, serve stale DB data */});
   const prospects = await prisma.prospect.findMany({
     include: {
       addresses: true,
@@ -73,7 +73,7 @@ export async function getPersistentCrmProspects() {
       client: true
     },
     orderBy: { createdAt: "desc" }
-  });
+  }).catch(() => []);
 
   return prospects.map(databaseProspectToProspect);
 }
