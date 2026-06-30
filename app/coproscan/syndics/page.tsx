@@ -13,39 +13,44 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function SyndicsPage() {
-  const syndics = await prisma.syndic.findMany({
-    where: {
-      isDemo: false,
-      gdprOpposedAt: null,
-      coproprietes: {
-        some: {
-          department: { in: TARGET_DEPARTMENTS },
-          isDemo: false,
-          classificationStatus: { in: ["confirmed", "probable"] },
-          energyClass: { in: ["E", "F", "G"] },
+  let syndics: SyndicListItem[] = [];
+  try {
+    syndics = await prisma.syndic.findMany({
+      where: {
+        isDemo: false,
+        gdprOpposedAt: null,
+        coproprietes: {
+          some: {
+            department: { in: TARGET_DEPARTMENTS },
+            isDemo: false,
+            classificationStatus: { in: ["confirmed", "probable"] },
+            energyClass: { in: ["E", "F", "G"] },
+          },
         },
       },
-    },
-    include: {
-      _count: { select: { coproprietes: true, contacts: true, clayJobs: true } },
-      contacts: {
-        where: { contactStatus: { in: ["verified", "public_professional"] } },
-        select: { id: true, firstName: true, lastName: true, role: true },
-        take: 2,
-      },
-      coproprietes: {
-        where: {
-          department: { in: TARGET_DEPARTMENTS },
-          classificationStatus: "confirmed",
-          energyClass: { in: ["E", "F", "G"] },
-          isDemo: false,
+      include: {
+        _count: { select: { coproprietes: true, contacts: true, clayJobs: true } },
+        contacts: {
+          where: { contactStatus: { in: ["verified", "public_professional"] } },
+          select: { id: true, firstName: true, lastName: true, role: true },
+          take: 2,
         },
-        select: { lotsResidential: true, city: true, department: true },
+        coproprietes: {
+          where: {
+            department: { in: TARGET_DEPARTMENTS },
+            classificationStatus: "confirmed",
+            energyClass: { in: ["E", "F", "G"] },
+            isDemo: false,
+          },
+          select: { lotsResidential: true, city: true, department: true },
+        },
       },
-    },
-    orderBy: { name: "asc" },
-    take: 200,
-  }) as SyndicListItem[];
+      orderBy: { name: "asc" },
+      take: 200,
+    }) as SyndicListItem[];
+  } catch {
+    // DB unavailable — serve empty list
+  }
 
   const enrichmentColors: Record<string, string> = {
     done: "var(--success)",

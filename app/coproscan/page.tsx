@@ -207,14 +207,14 @@ export default async function CoproScanPage() {
 
   const clayJobs = (clayJobsList as RawClayJob[]).map((j) => ({
     id: j.id, jobType: j.jobType, status: j.status,
-    syndicName: j.syndic.name,
+    syndicName: j.syndic?.name ?? "",
     createdAt: j.createdAt.toISOString(),
   }));
 
   const contacts = (contactsList as RawContact[]).map((c) => ({
     id: c.id, firstName: c.firstName, lastName: c.lastName, role: c.role,
     emailPro: c.emailPro, contactStatus: c.contactStatus, emailVerified: c.emailVerified,
-    syndicName: c.syndic.name,
+    syndicName: c.syndic?.name ?? "",
   }));
 
   const drafts = (draftsList as RawDraft[]).map((d) => ({

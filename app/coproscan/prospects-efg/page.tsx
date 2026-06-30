@@ -9,20 +9,25 @@ export const revalidate = 0;
 export default async function ProspectsEfgPage() {
   const isProduction = process.env.APP_ENV === "production" && process.env.DEMO_MODE !== "true";
 
-  const items = await prisma.copropriete.findMany({
-    where: {
-      isDemo: false,
-      department: { in: TARGET_DEPARTMENTS },
-      classificationStatus: "confirmed",
-      energyClass: { in: ["E", "F", "G"] },
-    },
-    include: {
-      syndic: { select: { id: true, name: true, enrichmentStatus: true } },
-      _count: { select: { dpeProofs: true, emailDrafts: true } },
-    },
-    orderBy: [{ classificationScore: "desc" }, { lotsResidential: "desc" }],
-    take: 200,
-  }) as CoproprieteRow[];
+  let items: CoproprieteRow[] = [];
+  try {
+    items = await prisma.copropriete.findMany({
+      where: {
+        isDemo: false,
+        department: { in: TARGET_DEPARTMENTS },
+        classificationStatus: "confirmed",
+        energyClass: { in: ["E", "F", "G"] },
+      },
+      include: {
+        syndic: { select: { id: true, name: true, enrichmentStatus: true } },
+        _count: { select: { dpeProofs: true, emailDrafts: true } },
+      },
+      orderBy: [{ classificationScore: "desc" }, { lotsResidential: "desc" }],
+      take: 200,
+    }) as CoproprieteRow[];
+  } catch {
+    // DB unavailable — serve empty list
+  }
 
   const efgColors: Record<string, string> = {
     E: "#f59e0b",

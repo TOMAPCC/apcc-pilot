@@ -6,32 +6,37 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AQualifierPage() {
-  const [unknownCount, totalImported] = await Promise.all([
-    prisma.copropriete.count({
+  let unknownCount = 0, totalImported = 0;
+  let items: CoproprieteRow[] = [];
+  try {
+    [unknownCount, totalImported] = await Promise.all([
+      prisma.copropriete.count({
+        where: {
+          isDemo: false,
+          department: { in: TARGET_DEPARTMENTS },
+          classificationStatus: "unknown",
+        },
+      }),
+      prisma.copropriete.count({
+        where: { isDemo: false, department: { in: TARGET_DEPARTMENTS } },
+      }),
+    ]);
+    items = await prisma.copropriete.findMany({
       where: {
         isDemo: false,
         department: { in: TARGET_DEPARTMENTS },
         classificationStatus: "unknown",
       },
-    }),
-    prisma.copropriete.count({
-      where: { isDemo: false, department: { in: TARGET_DEPARTMENTS } },
-    }),
-  ]);
-
-  const items = await prisma.copropriete.findMany({
-    where: {
-      isDemo: false,
-      department: { in: TARGET_DEPARTMENTS },
-      classificationStatus: "unknown",
-    },
-    include: {
-      syndic: { select: { id: true, name: true } },
-      _count: { select: { dpeProofs: true, energyProofs: true } },
-    },
-    orderBy: { lotsResidential: "desc" },
-    take: 100,
-  }) as CoproprieteRow[];
+      include: {
+        syndic: { select: { id: true, name: true } },
+        _count: { select: { dpeProofs: true, energyProofs: true } },
+      },
+      orderBy: { lotsResidential: "desc" },
+      take: 100,
+    }) as CoproprieteRow[];
+  } catch {
+    // DB unavailable — serve zeros
+  }
 
   return (
     <div>
