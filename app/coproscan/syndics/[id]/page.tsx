@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 type SyndicDetail = SyndicRow & {
-  coproprietes: (CoproprieteRow & { _count: { dpeProofs: number; energyProofs: number; interactions: number; emailDrafts: number } })[];
+  coproprietes: (CoproprieteRow & { _count: { dpeProofs: number } })[];
   contacts: (ContactRow & { _count: { contactProofs: number; emailDrafts: number } })[];
   clayJobs: ClayJobRow[];
 };
